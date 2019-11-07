@@ -1,5 +1,6 @@
 package wifi;
 import java.io.PrintWriter;
+import java.util.concurrent.ArrayBlockingQueue;
 
 import rf.RF;
 
@@ -10,6 +11,11 @@ import rf.RF;
  */
 public class LinkLayer implements Dot11Interface 
 {
+	private static final int queue_size = 16;
+	
+	public static ArrayBlockingQueue<Packet> received = new ArrayBlockingQueue<>(queue_size);
+	public static ArrayBlockingQueue<Packet> outgoingQueue = new ArrayBlockingQueue<>(queue_size);
+	
 	private RF theRF;           // You'll need one of these eventually
 	private short ourMAC;       // Our MAC address
 	private PrintWriter output; // The output stream we'll write to
@@ -42,9 +48,20 @@ public class LinkLayer implements Dot11Interface
 	 * the Transmission object.  See docs for full description.
 	 */
 	public int recv(Transmission t) {
-		output.println("LinkLayer: Pretending to block on recv()");
-		while(true); // <--- This is a REALLY bad way to wait.  Sleep a little each time through.
-		// return 0;
+		output.println("LinkLayer: blocking on recv()");
+		try {
+			Packet incoming = received.take();
+			t.setSourceAddr(incoming.getSrc());
+			t.setDestAddr(incoming.getDest());
+			int l = t.getBuf().length;
+			for (int i = 0; i<l; i++) {
+				t.getBuf()[i] = incoming.getData()[i];
+			}
+			//As per the specification, the remaining data is discarded
+		} catch (Exception e) {
+			output.print("LinkLayer: recv interrupted!");
+		}
+		return 0;
 	}
 
 	/**
