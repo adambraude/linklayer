@@ -61,9 +61,8 @@ public class LinkLayer implements Dot11Interface
 				//If the data is meant for us, or for everyone, leave the loop
 				if (incoming.getDest() == this.ourMAC || incoming.getDest() == -1) {
 					ours = true;
-				} else {
-
 				}
+				
 			} catch (Exception e){
 				System.out.println("LinkLayer: rec interrupted!");
 			}
