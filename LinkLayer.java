@@ -49,8 +49,27 @@ public class LinkLayer implements Dot11Interface
 	 */
 	public int recv(Transmission t) {
 		output.println("LinkLayer: blocking on recv()");
+		Packet incoming = null;
+		boolean ours = false;
+
+		// Block until we recieve the data meant for us
+		while (!ours) {
+			try {
+				//Should block until data is available
+				incoming = received.take();
+
+				//If the data is meant for us, or for everyone, leave the loop
+				if (incoming.getDest() == this.ourMAC || incoming.getDest() == -1) {
+					ours = true;
+				} else {
+
+				}
+			} catch (Exception e){
+				System.out.println("LinkLayer: rec interrupted!");
+			}
+		}
+
 		try {
-			Packet incoming = received.take();
 			t.setSourceAddr(incoming.getSrc());
 			t.setDestAddr(incoming.getDest());
 			int l = t.getBuf().length;
@@ -61,7 +80,11 @@ public class LinkLayer implements Dot11Interface
 		} catch (Exception e) {
 			output.print("LinkLayer: recv interrupted!");
 		}
-		return 0;
+		if (incoming.getPacket().length  <= t.getBuf().length) {
+			return incoming.getPacket().length;
+		} else {
+			return t.getBuf().length;
+		}
 	}
 
 	/**
