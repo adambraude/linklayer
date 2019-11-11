@@ -62,7 +62,7 @@ public class LinkLayer implements Dot11Interface
 				if (incoming.getDest() == this.ourMAC || incoming.getDest() == -1) {
 					ours = true;
 				}
-				
+
 			} catch (Exception e){
 				System.out.println("LinkLayer: rec interrupted!");
 			}
@@ -79,6 +79,10 @@ public class LinkLayer implements Dot11Interface
 		} catch (Exception e) {
 			output.print("LinkLayer: recv interrupted!");
 		}
+
+		// At this point, know that the message has been succesfully recieved. This would be where
+		// the ACK would be made and probably sent
+
 		if (incoming.getPacket().length  <= t.getBuf().length) {
 			return incoming.getPacket().length;
 		} else {
