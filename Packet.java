@@ -21,28 +21,44 @@ public class Packet {
 	
 	/**
 	 * Converts a received packet into a packet object
-	 * @param received
+	 * @param received the packet recieved from a transmission
 	 */
 	public Packet (byte[] received) {
 		packet = received;
 	}
-	
+
+	/**
+	 * Returns the source from the packet
+	 * @return A short that is the source destination
+	 */
 	public short getSrc() 
 	{
 		//TODO: extract from packet
 		return 0;
 	}
-	
+
+	/**
+	 * Returns a short that is the destination for the packet
+	 * @return a short of the destination for the packet
+	 */
 	public short getDest() {
 		//TODO: extract from packet
 		return 0;
 	}
-	
+
+	/**
+	 * Method that extracts the data from the packet
+	 * @return a byte array that is the data from the packet
+	 */
 	public byte[] getData() {
 		//TODO: extract from packet
 		return new byte[1];
 	}
-	
+
+	/**
+	 * Returns the packet in the form of a byte array
+	 * @return the packet in byte array form
+	 */
 	public byte[] getPacket() {
 		//This one is good
 		return packet;

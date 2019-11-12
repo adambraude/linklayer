@@ -39,6 +39,24 @@ public class LinkLayer implements Dot11Interface
 	 */
 	public int send(short dest, byte[] data, int len) {
 		output.println("LinkLayer: Sending "+len+" bytes to "+dest);
+
+		// construct packet from dest, data, source is our mac address
+
+		boolean inUse = theRF.inUse();
+		// Threads in the recieve and sender class need to set up, this code prob needs to be
+		// moved into the sender class
+		while (inUse) {
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				output.println("Error occured while sending data");
+				return -1;
+			}
+
+			inUse = theRF.inUse();
+		}
+
 		theRF.transmit(data);
 
 		return Math.min(len, data.length);
@@ -65,7 +83,7 @@ public class LinkLayer implements Dot11Interface
 				}
 
 			} catch (Exception e){
-				System.out.println("LinkLayer: rec interrupted!");
+				output.println("LinkLayer: rec interrupted!");
 				return -1;
 			}
 		}
