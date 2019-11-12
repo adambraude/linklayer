@@ -1,6 +1,7 @@
 package wifi;
 import java.io.PrintWriter;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import rf.RF;
 
@@ -31,6 +32,16 @@ public class LinkLayer implements Dot11Interface
 		this.output = output;      
 		theRF = new RF(null, null);
 		output.println("LinkLayer: Constructor ran.");
+
+		// I think we need to start the threads here
+		Receiver rec = new Receiver(theRF, ourMAC, output, received);
+		Sender writ = new Sender(theRF, ourMAC, output);
+
+		Thread read = new Thread(rec);
+		Thread writer = new Thread(writ);
+
+		read.start();
+		writer.start();
 	}
 
 	/**
@@ -68,24 +79,14 @@ public class LinkLayer implements Dot11Interface
 	 */
 	public int recv(Transmission t) {
 		output.println("LinkLayer: blocking on recv()");
-		Packet incoming = null;
-		boolean ours = false;
-
 		// Block until we recieve the data meant for us
-		while (!ours) {
-			try {
-				//Should block until data is available
-				incoming = received.take();
-
-				//If the data is meant for us, or for everyone, leave the loop
-				if (incoming.getDest() == this.ourMAC || incoming.getDest() == -1) {
-					ours = true;
-				}
-
-			} catch (Exception e){
-				output.println("LinkLayer: rec interrupted!");
-				return -1;
-			}
+		Packet incoming;
+		try {
+			TimeUnit time = TimeUnit.MILLISECONDS;
+			incoming = received.poll(1, time);
+		} catch (Exception e) {
+			output.println("Didn't recieve a packet");
+			return -1;
 		}
 
 		try {
