@@ -39,7 +39,7 @@ public class LinkLayer implements Dot11Interface
 
 		// I think we need to start the threads here
 		Receiver rec = new Receiver(theRF, ourMAC, output, received);
-		Sender writ = new Sender(theRF, ourMAC, output);
+		Sender writ = new Sender(theRF, ourMAC, output, outgoingQueue);
 
 		read = new Thread(rec);
 		writer = new Thread(writ);
@@ -56,22 +56,8 @@ public class LinkLayer implements Dot11Interface
 
 		// construct packet from dest, data, source is our mac address
 
-		boolean inUse = theRF.inUse();
-		// Threads in the recieve and sender class need to set up, this code prob needs to be
-		// moved into the sender class
-		while (inUse) {
-			try {
-				Thread.sleep(100);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-				output.println("Error occured while sending data");
-				return -1;
-			}
-
-			inUse = theRF.inUse();
-		}
-
-		theRF.transmit(data);
+		Packet p = new Packet(ourMAC, dest, data, Packet.FT_DATA, 0, false);
+		outgoingQueue.add(p);
 
 		return Math.min(len, data.length);
 	}
