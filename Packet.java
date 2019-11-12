@@ -51,7 +51,7 @@ public class Packet {
 	
 	/**
 	 * Converts a received packet into a packet object
-	 * @param received
+	 * @param received the packet received from a transmission
 	 */
 	public Packet (byte[] received) {
 		packet = received;
@@ -118,7 +118,7 @@ public class Packet {
 	public short getDest() {
 		return (short)bytesToInt(2,3);
 	}
-	
+
 	/**
 	 * An array buffer with all the data
 	 * @return a byte array of length 2038
