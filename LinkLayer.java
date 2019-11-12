@@ -98,8 +98,11 @@ public class LinkLayer implements Dot11Interface
 			t.setDestAddr(incoming.getDest());
 
 			int l = t.getBuf().length;
-			for (int i = 0; i<l; i++) {
-				t.getBuf()[i] = incoming.getData()[i];
+			byte[] data = incoming.getData();
+
+			//uses the packet getData() method to strip the data from the packet
+			for (int i = 0; i<l && i < data.length; i++) {
+				t.getBuf()[i] = data[i];
 			}
 
 			//As per the specification, the remaining data is discarded
@@ -112,7 +115,7 @@ public class LinkLayer implements Dot11Interface
 		// the ACK would be made and probably sent
 
 		//Returns the amount of data stored
-		return Math.min(incoming.getPacket().length, t.getBuf().length);
+		return Math.min(incoming.getData().length, t.getBuf().length);
 	}
 
 	/**
