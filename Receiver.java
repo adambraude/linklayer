@@ -36,7 +36,7 @@ public class Receiver implements Runnable {
 				}
 
 			} catch (Exception e){
-				output.println("LinkLayer: rec interrupted!");
+				//output.println("LinkLayer: rec interrupted!");
 			}
 
 			try {

@@ -1,5 +1,6 @@
 package wifi;
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -100,14 +101,12 @@ public class LinkLayer implements Dot11Interface
 			int l = t.getBuf().length;
 			byte[] data = incoming.getData();
 
-			//uses the packet getData() method to strip the data from the packet
-			for (int i = 0; i<l && i < data.length; i++) {
-				t.getBuf()[i] = data[i];
-			}
+			// Copies data to t, while respecting t buff size
+            t.setBuf(Arrays.copyOf(data, l));
 
 			//As per the specification, the remaining data is discarded
 		} catch (Exception e) {
-			output.print("LinkLayer: recv interrupted!");
+			output.println("LinkLayer: Error when copying data");
 			return -1;
 		}
 
