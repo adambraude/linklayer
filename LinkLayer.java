@@ -88,8 +88,13 @@ public class LinkLayer implements Dot11Interface
 			// can be set to wait however long, currently in units of ms
 			incoming = received.poll(10, time);
 		} catch (Exception e) {
-			output.println("Didn't receive a packet");
+			output.println("Didn't receive a packet, or ran into an error");
 			return -1;
+		}
+
+		if (incoming == null) {
+			output.println("Didn't receive a packet");
+			return 0;
 		}
 
 		try {
