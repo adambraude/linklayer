@@ -21,6 +21,9 @@ public class LinkLayer implements Dot11Interface
 	private short ourMAC;       // Our MAC address
 	private PrintWriter output; // The output stream we'll write to
 
+	private Thread read;
+	private Thread writer;
+
 	/**
 	 * Constructor takes a MAC address and the PrintWriter to which our output will
 	 * be written.
@@ -37,9 +40,8 @@ public class LinkLayer implements Dot11Interface
 		Receiver rec = new Receiver(theRF, ourMAC, output, received);
 		Sender writ = new Sender(theRF, ourMAC, output);
 
-		Thread read = new Thread(rec);
-		Thread writer = new Thread(writ);
-
+		read = new Thread(rec);
+		writer = new Thread(writ);
 		read.start();
 		writer.start();
 	}
@@ -79,32 +81,37 @@ public class LinkLayer implements Dot11Interface
 	 */
 	public int recv(Transmission t) {
 		output.println("LinkLayer: blocking on recv()");
-		// Block until we recieve the data meant for us
+		// Block until we receive the data meant for us
 		Packet incoming;
 		try {
 			TimeUnit time = TimeUnit.MILLISECONDS;
-			incoming = received.poll(1, time);
+			// can be set to wait however long, currently in units of ms
+			incoming = received.poll(10, time);
 		} catch (Exception e) {
-			output.println("Didn't recieve a packet");
+			output.println("Didn't receive a packet");
 			return -1;
 		}
 
 		try {
+			//give the transmission the necessary information
 			t.setSourceAddr(incoming.getSrc());
 			t.setDestAddr(incoming.getDest());
+
 			int l = t.getBuf().length;
 			for (int i = 0; i<l; i++) {
 				t.getBuf()[i] = incoming.getData()[i];
 			}
+
 			//As per the specification, the remaining data is discarded
 		} catch (Exception e) {
 			output.print("LinkLayer: recv interrupted!");
 			return -1;
 		}
 
-		// At this point, know that the message has been succesfully recieved. This would be where
+		// At this point, know that the message has been successfully received. This would be where
 		// the ACK would be made and probably sent
 
+		//Returns the amount of data stored
 		return Math.min(incoming.getPacket().length, t.getBuf().length);
 	}
 

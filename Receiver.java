@@ -23,14 +23,14 @@ public class Receiver implements Runnable {
 		boolean ours = false;
 		Packet incoming = null;
 
-		// Block until we recieve data meant for us
-		while (!ours) {
+		// Always check for incoming data
+		while (true) {
 			try {
-				//Should block until data is available
+				//Should block until data comes in
 				byte[] packet = theRF.receive();
 				incoming = new Packet(packet);
 
-				//If the data is meant for us, or for everyone, leave the loop
+				//If the data is meant for us, or for everyone, mark it
 				if (incoming.getDest() == this.ourMAC || incoming.getDest() == -1) {
 					ours = true;
 				}
@@ -42,9 +42,13 @@ public class Receiver implements Runnable {
 			try {
 				if (incoming == null) {
 					output.println("Error in viewing incoming packet");
-					return;
+				} else {
+					// if ours, send data up, reset marker
+					if (ours) {
+						received.put(incoming);
+						ours = false;
+					}
 				}
-				received.put(incoming);
 			} catch (Exception e){
 				output.println("Error returning incoming packet");
 			}
