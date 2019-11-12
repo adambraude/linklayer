@@ -7,9 +7,9 @@ import java.util.concurrent.TimeUnit;
 import rf.RF;
 
 /**
- * Use this layer as a starting point for your project code.  See {@link Dot11Interface} for more
- * details on these routines.
- * @author richards
+ * This layer is an implementation of {@link Dot11Interface} using the patented BradCo RF layer.
+ * 
+ * @author Braude, Corpron, Richards
  */
 public class LinkLayer implements Dot11Interface 
 {
@@ -37,7 +37,7 @@ public class LinkLayer implements Dot11Interface
 		theRF = new RF(null, null);
 		output.println("LinkLayer: Constructor ran.");
 
-		// I think we need to start the threads here
+		// Launch threads
 		Receiver rec = new Receiver(theRF, ourMAC, output, received);
 		Sender writ = new Sender(theRF, ourMAC, output, outgoingQueue);
 
@@ -53,9 +53,6 @@ public class LinkLayer implements Dot11Interface
 	 */
 	public int send(short dest, byte[] data, int len) {
 		output.println("LinkLayer: Sending "+len+" bytes to "+dest);
-
-		// construct packet from dest, data, source is our mac address
-
 		Packet p = new Packet(ourMAC, dest, data, Packet.FT_DATA, 0, false);
 		outgoingQueue.add(p);
 
@@ -90,7 +87,7 @@ public class LinkLayer implements Dot11Interface
 			// Copies data to t, while respecting t buff size
             t.setBuf(Arrays.copyOf(data, l));
 
-			//As per the specification, the remaining data is discarded
+            //As per the specification, the remaining data is discarded
 		} catch (Exception e) {
 			output.println("LinkLayer: Error when copying data");
 			return -1;

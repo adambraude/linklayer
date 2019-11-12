@@ -3,6 +3,13 @@ import rf.RF;
 import java.io.PrintWriter;
 import java.util.concurrent.ArrayBlockingQueue;
 
+/**
+ * This thread listens to the RF layer and delivers
+ * incoming messages to a queue.
+ * 
+ * @author Corpron
+ *
+ */
 public class Receiver implements Runnable {
 
 	private RF theRF;
@@ -19,7 +26,6 @@ public class Receiver implements Runnable {
 	
 	@Override
 	public void run() {
-		// TODO good things
 		boolean ours = false;
 		Packet incoming = null;
 

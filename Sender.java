@@ -3,6 +3,13 @@ import rf.RF;
 import java.io.PrintWriter;
 import java.util.concurrent.ArrayBlockingQueue;
 
+/**
+ * This thread takes packets from a queue and sends them
+ * across the network.
+ * 
+ * @author Braude
+ *
+ */
 public class Sender implements Runnable {
 
 	private RF theRF;

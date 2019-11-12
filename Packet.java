@@ -2,6 +2,14 @@ package wifi;
 
 import java.util.zip.CRC32;
 
+/**
+ * Wrapper class for a packet.
+ * This class can be used to build a packet from a given
+ * set of parameters, or parse a byte array into its component fields
+ * 
+ * @author Braude
+ *
+ */
 public class Packet {
 
 	public static final int MAX_DATA = 2038;
@@ -34,15 +42,26 @@ public class Packet {
 		}
 		while (seq > MAX_SEQ) seq -= MAX_SEQ;
 		packet = new byte[data.length + NONDATABYTES];
+		
+		//Half the sequence number, the retry bit, and the 3-bit type all
+		//have to go int the same byte.
 		packet[0] = (byte)(seq >>8);
 		packet[0] |= (type <<5);
 		if (retry) packet[0] |= 1 << 4;
+		
+		//Sequence number part 2
 		packet[1] = (byte)(seq);
+		
+		//Addresses
 		packet[2] = (byte)(dest>>8);
 		packet[3] = (byte)(dest);
 		packet[4] = (byte)(src>>8);
 		packet[5] = (byte)(src);
+		
+		//Data
 		System.arraycopy(data, 0, packet, 6, data.length);
+		
+		//CRC
 		CRC32 chksm = new CRC32();
 		chksm.update(packet, 0, packet.length-4);
 		for (int i = 0; i < 4; i++) {
@@ -122,7 +141,7 @@ public class Packet {
 
 	/**
 	 * An array buffer with all the data
-	 * @return a byte array of length 2038
+	 * @return a byte array
 	 */
 	public byte[] getData() {
 		if (data == null) {
@@ -134,10 +153,9 @@ public class Packet {
 	
 	/**
 	 * Returns the packet as a byte array
-	 * @return an array of 2048 bytes laid out as per 802.11~
+	 * @return an array of bytes laid out as per 802.11~
 	 */
 	public byte[] getPacket() {
-		//This one is good
 		return packet;
 	}
 	
