@@ -14,6 +14,7 @@ public class Packet {
 	public static final int FT_RTS = 5;
 	public static final int MAX_SEQ = 4095;
 	public static final int MAX_BYTE = 256;
+	public static final int NONDATABYTES=10;
 	
 	private byte[] packet;
 	private byte[] data;
@@ -32,7 +33,7 @@ public class Packet {
 			throw new IllegalArgumentException("Maximum packet length of " + MAX_DATA + " exceeded.");
 		}
 		while (seq > MAX_SEQ) seq -= MAX_SEQ;
-		packet = new byte[PACKET_SIZE];
+		packet = new byte[data.length + NONDATABYTES];
 		packet[0] = (byte)(seq >>8);
 		packet[0] |= (type <<5);
 		if (retry) packet[0] |= 1 << 4;
@@ -43,7 +44,7 @@ public class Packet {
 		packet[5] = (byte)(src);
 		System.arraycopy(data, 0, packet, 6, data.length);
 		CRC32 chksm = new CRC32();
-		chksm.update(packet, 0, PACKET_SIZE - 4);
+		chksm.update(packet, 0, packet.length-4);
 		for (int i = 0; i < 4; i++) {
 			packet[packet.length-1-i] = (byte)(chksm.getValue()>>8*i);
 		}
@@ -125,8 +126,8 @@ public class Packet {
 	 */
 	public byte[] getData() {
 		if (data == null) {
-			data = new byte[MAX_DATA];
-			System.arraycopy(packet, 6, data, 0, MAX_DATA);
+			data = new byte[packet.length-10];
+			System.arraycopy(packet, 6, data, 0, packet.length-NONDATABYTES);
 		}
 		return data;
 	}
@@ -145,9 +146,9 @@ public class Packet {
 	 * @return true if the calculated checksum matches the one included with the packet.
 	 */
 	public boolean integrityCheck () {
-		int crc = bytesToInt(2044,2047);
+		int crc = bytesToInt(packet.length-5,packet.length-1);
 		CRC32 chksm = new CRC32();
-		chksm.update(packet, 0, PACKET_SIZE - 4);
+		chksm.update(packet, 0, packet.length-4);
 		return crc==chksm.getValue();
 	}
 	
