@@ -84,17 +84,12 @@ public class LinkLayer implements Dot11Interface
 		// Block until we receive the data meant for us
 		Packet incoming;
 		try {
-			TimeUnit time = TimeUnit.MILLISECONDS;
+			//TimeUnit time = TimeUnit.MILLISECONDS;
 			// can be set to wait however long, currently in units of ms
-			incoming = received.poll(10, time);
+			incoming = received.take();
 		} catch (Exception e) {
 			output.println("Didn't receive a packet, or ran into an error");
 			return -1;
-		}
-
-		if (incoming == null) {
-			output.println("Didn't receive a packet");
-			return 0;
 		}
 
 		try {
