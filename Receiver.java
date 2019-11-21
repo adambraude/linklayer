@@ -42,12 +42,12 @@ public class Receiver implements Runnable {
 				}
 
 			} catch (Exception e){
-				//output.println("LinkLayer: rec interrupted!");
+				if (LinkLayer.debugLevel() > 1) output.println("LinkLayer: rec interrupted!");
 			}
 
 			try {
 				if (incoming == null) {
-					output.println("Error in viewing incoming packet");
+					if (LinkLayer.debugLevel() > 0) output.println("Error in viewing incoming packet");
 				} else {
 					// if ours, send data up, reset marker
 					if (ours) {
@@ -56,7 +56,7 @@ public class Receiver implements Runnable {
 					}
 				}
 			} catch (Exception e){
-				output.println("Error returning incoming packet");
+				if (LinkLayer.debugLevel() > 0) output.println("Error returning incoming packet");
 			}
 		}
 	}

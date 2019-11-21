@@ -21,6 +21,8 @@ public class LinkLayer implements Dot11Interface
 	private RF theRF;           // You'll need one of these eventually
 	private short ourMAC;       // Our MAC address
 	private PrintWriter output; // The output stream we'll write to
+	
+	private static int debugLevel = 1;
 
 	private Thread read;
 	private Thread writer;
@@ -35,7 +37,7 @@ public class LinkLayer implements Dot11Interface
 		this.ourMAC = ourMAC;
 		this.output = output;      
 		theRF = new RF(null, null);
-		output.println("LinkLayer: Constructor ran.");
+		if (debugLevel>0) output.println("LinkLayer: Constructor ran.");
 
 		// Launch threads
 		Receiver rec = new Receiver(theRF, ourMAC, output, received);
@@ -52,7 +54,7 @@ public class LinkLayer implements Dot11Interface
 	 * of bytes to send.  See docs for full description.
 	 */
 	public int send(short dest, byte[] data, int len) {
-		output.println("LinkLayer: Sending "+len+" bytes to "+dest);
+		if (debugLevel > 0) output.println("LinkLayer: Sending "+len+" bytes to "+dest);
 		Packet p = new Packet(ourMAC, dest, data, Packet.FT_DATA, 0, false);
 		outgoingQueue.add(p);
 
@@ -64,15 +66,13 @@ public class LinkLayer implements Dot11Interface
 	 * the Transmission object.  See docs for full description.
 	 */
 	public int recv(Transmission t) {
-		output.println("LinkLayer: blocking on recv()");
+		if (debugLevel > 0) output.println("LinkLayer: blocking on recv()");
 		// Block until we receive the data meant for us
 		Packet incoming;
 		try {
-			//TimeUnit time = TimeUnit.MILLISECONDS;
-			// can be set to wait however long, currently in units of ms
 			incoming = received.take();
 		} catch (Exception e) {
-			output.println("Didn't receive a packet, or ran into an error");
+			if (debugLevel > 0) output.println("Didn't receive a packet, or ran into an error");
 			return -1;
 		}
 
@@ -89,7 +89,7 @@ public class LinkLayer implements Dot11Interface
 
             //As per the specification, the remaining data is discarded
 		} catch (Exception e) {
-			output.println("LinkLayer: Error when copying data");
+			if (debugLevel > 0) output.println("LinkLayer: Error when copying data");
 			return -1;
 		}
 
@@ -104,7 +104,7 @@ public class LinkLayer implements Dot11Interface
 	 * Returns a current status code.  See docs for full description.
 	 */
 	public int status() {
-		output.println("LinkLayer: Faking a status() return value of 0");
+		if (debugLevel > 0) output.println("LinkLayer: Faking a status() return value of 0");
 		return 0;
 	}
 
@@ -112,7 +112,11 @@ public class LinkLayer implements Dot11Interface
 	 * Passes command info to your link layer.  See docs for full description.
 	 */
 	public int command(int cmd, int val) {
-		output.println("LinkLayer: Sending command "+cmd+" with value "+val);
+		if (debugLevel > 0) output.println("LinkLayer: Sending command "+cmd+" with value "+val);
 		return 0;
+	}
+	
+	protected static int debugLevel() {
+		return debugLevel();
 	}
 }

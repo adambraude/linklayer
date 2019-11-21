@@ -31,7 +31,7 @@ public class Sender implements Runnable {
 			try {
 				packet = toSend.take();
 			} catch (Exception e) {
-				output.print("Sender: error while retrieving packet");
+				if (LinkLayer.debugLevel() > 0) output.print("Sender: error while retrieving packet");
 				continue;
 			}
 			
@@ -42,7 +42,7 @@ public class Sender implements Runnable {
 					Thread.sleep(100);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
-					output.println("Sender: error while sleeping");
+					if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping");
 				}
 
 				inUse = theRF.inUse();
