@@ -1,13 +1,14 @@
 package wifi;
 import rf.RF;
 import java.io.PrintWriter;
+import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 
 /**
  * This thread listens to the RF layer and delivers
  * incoming messages to a queue.
  * 
- * @author Corpron
+ * @author Corpron, Braude
  *
  */
 public class Receiver implements Runnable {
@@ -17,11 +18,28 @@ public class Receiver implements Runnable {
 	private PrintWriter output;
 	private ArrayBlockingQueue<Packet> received;
 	
+	//Unused, so far
+	//private HashMap<Short, Integer> incomingSeq = new HashMap<>();
+	
 	public Receiver(RF theRF, short ourMAC, PrintWriter output, ArrayBlockingQueue<Packet> received) {
 		this.theRF = theRF;
 		this.ourMAC = ourMAC;
 		this.output = output;
 		this.received = received;
+	}
+	
+	//Given a packet, sends an appropriate ACK
+	private void sendAck(Packet p) {
+		if (LinkLayer.debugLevel() > 0) output.println("Receiver: sending ack to " + p.getSrc());
+		Packet ack = new Packet(ourMAC, p.getSrc(), new byte[0], Packet.FT_ACK, p.getSeq(), false);
+		try {
+			//For sending an ACK, we can just wait SIFS and then go.
+			//This works because we're ignoring PIFS messages for this simulation
+			Thread.sleep(theRF.aSIFSTime);
+			theRF.transmit(ack.getPacket());
+		} catch (Exception e) {
+			if (LinkLayer.debugLevel() == 2) output.println("Receiver: error trying to sleep.");
+		}
 	}
 	
 	@Override
@@ -36,27 +54,39 @@ public class Receiver implements Runnable {
 				byte[] packet = theRF.receive();
 				incoming = new Packet(packet);
 
+				//TODO: fix this
+				/*if (!incoming.integrityCheck()) {
+					if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a damaged packet");
+					continue;
+				}*/
+				
 				//If the data is meant for us, or for everyone, mark it
 				if (incoming.getDest() == this.ourMAC || incoming.getDest() == -1) {
 					ours = true;
+					if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a packet for us!");
+				} else {
+					if (LinkLayer.debugLevel() == 2) output.println("Receiver: packet received, but it's not ours.");
 				}
 
 			} catch (Exception e){
-				if (LinkLayer.debugLevel() > 1) output.println("LinkLayer: rec interrupted!");
+				if (LinkLayer.debugLevel() == 2) output.println("Receiver: rec interrupted!");
 			}
 
 			try {
 				if (incoming == null) {
-					if (LinkLayer.debugLevel() > 0) output.println("Error in viewing incoming packet");
+					if (LinkLayer.debugLevel() == 2) output.println("Receiver: error in viewing incoming packet");
 				} else {
 					// if ours, send data up, reset marker
 					if (ours) {
 						received.put(incoming);
+						if (incoming.getDest() == this.ourMAC) {
+							sendAck(incoming);
+						}
 						ours = false;
 					}
 				}
 			} catch (Exception e){
-				if (LinkLayer.debugLevel() > 0) output.println("Error returning incoming packet");
+				if (LinkLayer.debugLevel() == 2) output.println("Receiver: error returning incoming packet");
 			}
 		}
 	}

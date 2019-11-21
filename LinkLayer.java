@@ -22,7 +22,7 @@ public class LinkLayer implements Dot11Interface
 	private short ourMAC;       // Our MAC address
 	private PrintWriter output; // The output stream we'll write to
 	
-	private static int debugLevel = 1;
+	private static int debugLevel = 2;
 
 	private Thread read;
 	private Thread writer;
@@ -117,6 +117,6 @@ public class LinkLayer implements Dot11Interface
 	}
 	
 	protected static int debugLevel() {
-		return debugLevel();
+		return debugLevel;
 	}
 }
