@@ -168,8 +168,6 @@ public class Packet {
 		long crc = bytesToInt(packet.length-4,packet.length-1);
 		CRC32 chksm = new CRC32();
 		chksm.update(packet, 0, packet.length-4);
-		System.out.println("CRC: " + crc);
-		System.out.println("Calc'd CRC: " + chksm.getValue());
 		return crc==chksm.getValue();
 	}
 	
