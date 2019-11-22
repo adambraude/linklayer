@@ -54,16 +54,16 @@ public class Receiver implements Runnable {
 				byte[] packet = theRF.receive();
 				incoming = new Packet(packet);
 
-				//TODO: fix this
-				/*if (!incoming.integrityCheck()) {
+				if (!incoming.integrityCheck()) {
 					if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a damaged packet");
 					continue;
-				}*/
+				}
 				
 				//If the data is meant for us, or for everyone, mark it
-				if (incoming.getDest() == this.ourMAC || incoming.getDest() == -1) {
+				if ((incoming.getDest() == this.ourMAC || incoming.getDest() == -1) && incoming.getType() == Packet.FT_DATA) {
 					ours = true;
 					if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a packet for us!");
+					if (LinkLayer.debugLevel() == 2) output.println(incoming);
 				} else {
 					if (LinkLayer.debugLevel() == 2) output.println("Receiver: packet received, but it's not ours.");
 				}

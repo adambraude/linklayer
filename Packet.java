@@ -1,5 +1,6 @@
 package wifi;
 
+import java.util.Arrays;
 import java.util.zip.CRC32;
 
 /**
@@ -110,11 +111,11 @@ public class Packet {
 	}
 	
 	//Helper method for pulling integers out of a byte array.
-	private int bytesToInt(int start, int end) {
+	private long bytesToInt(int start, int end) {
 		int len = start-end;
-		int total = 0;
+		long total = 0;
 		for (int i = 0; i <= end-start; i++) {
-			int temp = (int)packet[start+i];
+			long temp = (int)packet[start+i];
 			if (temp <0) temp += MAX_BYTE;
 			temp <<= (8*(end-start-i));
 			total += temp;
@@ -164,21 +165,35 @@ public class Packet {
 	 * @return true if the calculated checksum matches the one included with the packet.
 	 */
 	public boolean integrityCheck () {
-		int crc = bytesToInt(packet.length-5,packet.length-1);
+		long crc = bytesToInt(packet.length-4,packet.length-1);
 		CRC32 chksm = new CRC32();
 		chksm.update(packet, 0, packet.length-4);
+		System.out.println("CRC: " + crc);
+		System.out.println("Calc'd CRC: " + chksm.getValue());
 		return crc==chksm.getValue();
+	}
+	
+	public String toString() {
+		String out = "";
+		out += "Source: " + this.getSrc();
+		out += " Dest: " + this.getDest();
+		out += " Data: " + Arrays.toString(this.getData());
+		out += " Type: " + this.getType();
+		out += " Seq: " + this.getSeq();
+		out += " Checksum? " + this.integrityCheck();
+		return out;
 	}
 	
 	// Unit-testing
 	public static void main(String[] args) {
-		Packet p = new Packet((short)555,(short)222,new byte[50], FT_CTS, 4092, true);
+		Packet p = new Packet((short)555,(short)229,new byte[50], FT_CTS, 4092, true);
 		System.out.println("Is this a retry? " + p.getRetry());
 		System.out.println("Seq?: " + p.getSeq() + " Expected: 4092");
 		System.out.println("Type?: " + p.getType() + " Expected: " + FT_CTS);
 		System.out.println("Dest: " + p.getDest());
 		System.out.println("Src: " + p.getSrc());
 		System.out.println("Checksum good? " + p.integrityCheck());
+		System.out.println(p);
 	}
 
 }
