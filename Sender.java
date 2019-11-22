@@ -16,12 +16,14 @@ public class Sender implements Runnable {
 	private short ourMAC;
 	private PrintWriter output;
 	private ArrayBlockingQueue<Packet> toSend;
+	private ArrayBlockingQueue<Packet> ackQueue;
 	
-	public Sender(RF theRF, short ourMAC, PrintWriter output, ArrayBlockingQueue<Packet> toSend) {
+	public Sender(RF theRF, short ourMAC, PrintWriter output, ArrayBlockingQueue<Packet> toSend,ArrayBlockingQueue<Packet> ackQueue) {
 		this.theRF = theRF;
 		this.ourMAC = ourMAC;
 		this.output = output;
 		this.toSend = toSend;
+		this.ackQueue = ackQueue;
 	}
 	
 	@Override

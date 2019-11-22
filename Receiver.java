@@ -17,15 +17,17 @@ public class Receiver implements Runnable {
 	private short ourMAC;
 	private PrintWriter output;
 	private ArrayBlockingQueue<Packet> received;
+	private ArrayBlockingQueue<Packet> ackQueue;
 	
 	//Unused, so far
 	//private HashMap<Short, Integer> incomingSeq = new HashMap<>();
 	
-	public Receiver(RF theRF, short ourMAC, PrintWriter output, ArrayBlockingQueue<Packet> received) {
+	public Receiver(RF theRF, short ourMAC, PrintWriter output, ArrayBlockingQueue<Packet> received, ArrayBlockingQueue<Packet> ackQueue) {
 		this.theRF = theRF;
 		this.ourMAC = ourMAC;
 		this.output = output;
 		this.received = received;
+		this.ackQueue = ackQueue;
 	}
 	
 	//Given a packet, sends an appropriate ACK
@@ -59,11 +61,11 @@ public class Receiver implements Runnable {
 					continue;
 				}
 				
+				
 				//If the data is meant for us, or for everyone, mark it
-				if ((incoming.getDest() == this.ourMAC || incoming.getDest() == -1) && incoming.getType() == Packet.FT_DATA) {
+				if (incoming.getDest() == this.ourMAC || incoming.getDest() == -1) {
 					ours = true;
 					if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a packet for us!");
-					if (LinkLayer.debugLevel() == 2) output.println(incoming);
 				} else {
 					if (LinkLayer.debugLevel() == 2) output.println("Receiver: packet received, but it's not ours.");
 				}
@@ -78,9 +80,17 @@ public class Receiver implements Runnable {
 				} else {
 					// if ours, send data up, reset marker
 					if (ours) {
-						received.put(incoming);
-						if (incoming.getDest() == this.ourMAC) {
-							sendAck(incoming);
+						if (incoming.getType() == Packet.FT_ACK) {
+							if (LinkLayer.debugLevel() == 2) output.println("Received an ACK, passing to sender");
+							ackQueue.add(incoming);
+							continue;
+						}
+						if (incoming.getType() == Packet.FT_DATA) {
+							if (LinkLayer.debugLevel() == 2) output.println("Received a data packet");
+							received.put(incoming);
+							if (incoming.getDest() == this.ourMAC) {
+								sendAck(incoming);
+							}
 						}
 						ours = false;
 					}

@@ -14,9 +14,11 @@ import rf.RF;
 public class LinkLayer implements Dot11Interface 
 {
 	private static final int queue_size = 16;
+	private static final int ack_size = 2;
 	
-	public static ArrayBlockingQueue<Packet> received = new ArrayBlockingQueue<>(queue_size);
-	public static ArrayBlockingQueue<Packet> outgoingQueue = new ArrayBlockingQueue<>(queue_size);
+	private static ArrayBlockingQueue<Packet> received = new ArrayBlockingQueue<>(queue_size);
+	private static ArrayBlockingQueue<Packet> outgoingQueue = new ArrayBlockingQueue<>(queue_size);
+	private static ArrayBlockingQueue<Packet> ackQueue = new ArrayBlockingQueue<>(ack_size);
 	
 	private RF theRF;           // You'll need one of these eventually
 	private short ourMAC;       // Our MAC address
@@ -40,8 +42,8 @@ public class LinkLayer implements Dot11Interface
 		if (debugLevel>0) output.println("LinkLayer: Constructor ran.");
 
 		// Launch threads
-		Receiver rec = new Receiver(theRF, ourMAC, output, received);
-		Sender writ = new Sender(theRF, ourMAC, output, outgoingQueue);
+		Receiver rec = new Receiver(theRF, ourMAC, output, received, ackQueue);
+		Sender writ = new Sender(theRF, ourMAC, output, outgoingQueue, ackQueue);
 
 		read = new Thread(rec);
 		writer = new Thread(writ);
