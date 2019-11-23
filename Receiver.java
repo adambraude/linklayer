@@ -19,8 +19,7 @@ public class Receiver implements Runnable {
 	private ArrayBlockingQueue<Packet> received;
 	private ArrayBlockingQueue<Packet> ackQueue;
 	
-	//Unused, so far
-	//private HashMap<Short, Integer> incomingSeq = new HashMap<>();
+	private HashMap<Short, Integer> incomingSeq = new HashMap<>();
 	
 	public Receiver(RF theRF, short ourMAC, PrintWriter output, ArrayBlockingQueue<Packet> received, ArrayBlockingQueue<Packet> ackQueue) {
 		this.theRF = theRF;
@@ -61,7 +60,6 @@ public class Receiver implements Runnable {
 					continue;
 				}
 				
-				
 				//If the data is meant for us, or for everyone, mark it
 				if (incoming.getDest() == this.ourMAC || incoming.getDest() == -1) {
 					ours = true;
@@ -86,6 +84,17 @@ public class Receiver implements Runnable {
 							continue;
 						}
 						if (incoming.getType() == Packet.FT_DATA) {
+							if (incoming.getDest() != -1) {
+								if (!incomingSeq.containsKey(incoming.getSrc())) {
+									incomingSeq.put(incoming.getSrc(), 0);
+								}
+								int seq = incomingSeq.get(incoming.getSrc());
+								if (incoming.getSeq() != seq) {
+									if (LinkLayer.debugLevel() > 0) output.println("Warning: received a packet with sequence number out of order.");
+								}
+								seq++;
+								incomingSeq.put(incoming.getSrc(), seq);
+							}
 							if (LinkLayer.debugLevel() == 2) output.println("Received a data packet");
 							received.put(incoming);
 							if (incoming.getDest() == this.ourMAC) {
