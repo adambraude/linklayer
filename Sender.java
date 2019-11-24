@@ -41,7 +41,7 @@ public class Sender implements Runnable {
             try {
                 packet = toSend.take();
             } catch (Exception e) {
-                if (LinkLayer.debugLevel() > 0) output.print("Sender: error while retrieving packet");
+                if (LinkLayer.debugLevel() > 0) output.println("Sender: error while retrieving packet");
                 continue;
             }
 
@@ -51,12 +51,22 @@ public class Sender implements Runnable {
             int sendCount = 1;
 
             boolean sent = false;
+            // If a packet sent doesn't receive an ack, always go down right side of chart
+            boolean cantSkip = false;
             // Inner while loop in case need to resend current packet of data
             while (!sent) {
-                if (sendCount > RF.dot11RetryLimit) break;
+                if (LinkLayer.debugLevel() == 2) output.println("Sender: Sending Packet attempt #"+sendCount);
+                if (sendCount > RF.dot11RetryLimit) {
+                    if (LinkLayer.debugLevel() > 0) output.print("Sender: Packet reached send attempt limit");
+                    break;
+                }
                 // Do left half of the diagram
-                // If true, can skip to sending
-                boolean jumpToACK = leftHalf(packet);
+                boolean jumpToACK = false;
+                // if left side is viable, attempt it
+                if (!cantSkip) {
+                    // If true, can skip to sending
+                    jumpToACK = leftHalf(packet);
+                }
 
                 // Starting right part of diagram
 
@@ -73,21 +83,21 @@ public class Sender implements Runnable {
                 theRF.transmit(packet.getPacket());
 
                 // now need to wait for an ack to appear in the ack queue
-                int sequence = packet.getSeq();
                 boolean gotACK = waitForACK(packet);
 
                 // Either move on to next packet, or remain on current
                 // If we got the wrong ack, increment exp and make sure packet has resent bit
                 if (!gotACK) {
-                    //System.out.println("Didn't receive ack, resending");
+                    if (LinkLayer.debugLevel() == 2) output.println("Didn't receive ack, resending");
                     if (!packet.getRetry()) {
                         packet = new Packet(packet.getSrc(), packet.getDest(), packet.getData(), packet.getType(), packet.getSeq(), true);
-                        //System.out.println("Making new Packet");
                     }
                     expCounter ++;
                     sendCount ++;
+                    cantSkip = true;
                 } else {
                     // If it is the correct ack, move on to the next packet.
+                    if (LinkLayer.debugLevel() == 2) output.print("ACK was for current packet, moving onto next one");
                     sent = true;
                 }
             }
@@ -108,7 +118,7 @@ public class Sender implements Runnable {
                 Thread.sleep(DIFS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
-                output.println("Sender: error while sleeping DIFS");
+                if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping DIFS");
             }
 
             // If medium is idle again, skip to sending the data, else go through right side
@@ -127,11 +137,11 @@ public class Sender implements Runnable {
             // If medium was busy first try, or after the second check, wait for medium to not be idle
             while (inUse) {
                 try {
-                    // SIFS time is 100 milliseconds, just replacing with a class constant
-                    Thread.sleep(RF.aSIFSTime);
+                    // If medium not idle, wait sifs and a slot time as specified
+                    Thread.sleep(RF.aSIFSTime+RF.aSlotTime);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
-                    output.println("Sender: error while sleeping");
+                    if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping");
                 }
 
                 inUse = theRF.inUse();
@@ -142,7 +152,7 @@ public class Sender implements Runnable {
                 Thread.sleep(DIFS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
-                output.println("Sender: error while sleeping DIFS");
+                if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping DIFS");
             }
 
             // Then check if the thread is in use. If it is, reset back. If not, skip to send.
@@ -182,7 +192,7 @@ public class Sender implements Runnable {
                     Thread.sleep(RF.aSlotTime);
                 } catch (Exception e) {
                     e.printStackTrace();
-                    output.println("Sender: error while sleeping");
+                    if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping");
                 }
 
                 slotsToWait --;
@@ -191,10 +201,11 @@ public class Sender implements Runnable {
             else {
                 // Wait for medium to be idle again
                 try {
-                    Thread.sleep(RF.aSIFSTime);
+                    // wait sifs and a slot time as specified
+                    Thread.sleep(RF.aSIFSTime+RF.aSlotTime);
                 } catch (Exception e) {
                     e.printStackTrace();
-                    output.println("Sender: error while sleeping");
+                    if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping");
                 }
             }
         }
@@ -205,8 +216,9 @@ public class Sender implements Runnable {
 
         Packet ack = null;
         // wait for ack for the timeout time
+        int CONSTANT = 1000;
         try {
-            ack = ackQueue.poll(RF.aSlotTime*10, TimeUnit.MILLISECONDS);
+            ack = ackQueue.poll(RF.aSlotTime+RF.aSIFSTime+CONSTANT, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             e.printStackTrace();
             if (LinkLayer.debugLevel() > 0) output.println("Sender: Error in waiting for ACK");
