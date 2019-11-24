@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
  * This thread takes packets from a queue and sends them
  * across the network.
  * 
- * @author Braude
+ * @author Braude and Corpron
  *
  */
 public class Sender implements Runnable {
