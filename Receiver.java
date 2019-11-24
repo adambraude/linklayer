@@ -20,6 +20,7 @@ public class Receiver implements Runnable {
 	private ArrayBlockingQueue<Packet> ackQueue;
 	
 	private HashMap<Short, Integer> incomingSeq = new HashMap<>();
+	private HashMap<Short, Integer> broadcastSeq = new HashMap<>();
 	
 	public Receiver(RF theRF, short ourMAC, PrintWriter output, ArrayBlockingQueue<Packet> received, ArrayBlockingQueue<Packet> ackQueue) {
 		this.theRF = theRF;
@@ -43,9 +44,60 @@ public class Receiver implements Runnable {
 		}
 	}
 	
+	private void handleACK(Packet ack) {
+		if (LinkLayer.debugLevel() == 2) output.println("Received an ACK, passing to sender");
+		ackQueue.add(ack);
+	}
+	
+	private void handleData(Packet incoming) {
+		boolean duplicate = false;
+		if (LinkLayer.debugLevel() == 2) output.println("Received a data packet");
+		if (incoming.getDest() != -1) {
+			//If we don't know the sender, start from 0
+			if (!incomingSeq.containsKey(incoming.getSrc())) {
+				incomingSeq.put(incoming.getSrc(), -1);
+			}
+			//Get sequence number of last seen packet
+			int lastSeq = incomingSeq.get(incoming.getSrc());
+			if (incoming.getSeq() > lastSeq+1) {
+				if (LinkLayer.debugLevel() > 0) output.println("Warning: detected a gap in transmissions.");
+			}
+			if (incoming.getSeq() <= lastSeq) {
+				if (LinkLayer.debugLevel() == 2) output.println("Received a duplicate packet.");
+				duplicate = true;
+			}
+			incomingSeq.put(incoming.getSrc(), (int)incoming.getSeq());
+		} else {
+			//There may have been broadcasts from this sender before we joined, so assume
+			//the first one we see has correct seq
+			if (!broadcastSeq.containsKey(incoming.getSrc())) {
+				broadcastSeq.put(incoming.getSrc(), (int)incoming.getSeq());
+				if (LinkLayer.debugLevel() == 2) output.println("New broadcast sender: " + incoming.getSrc());
+			} else {
+				int lastSeq = broadcastSeq.get(incoming.getSrc());
+				if (incoming.getSeq() > lastSeq+1) {
+					if (LinkLayer.debugLevel() > 0) output.println("Warning: broadcast packet seq out of order.");
+				}
+				if (incoming.getSeq() <= lastSeq) {
+					if (LinkLayer.debugLevel() == 2) output.println("Received a duplicate broadcast packet.");
+					duplicate = true;
+				}
+				broadcastSeq.put(incoming.getSrc(), (int)incoming.getSeq());
+			}
+		}
+		try {
+			if (!duplicate) received.put(incoming);
+		}
+		catch (Exception e) {
+			if (LinkLayer.debugLevel() == 2) output.println("Receiver: error passing packet to LinkLayer");
+		}
+		if (incoming.getDest() == this.ourMAC) {
+			sendAck(incoming);
+		}
+	}
+	
 	@Override
 	public void run() {
-		boolean ours = false;
 		Packet incoming = null;
 
 		// Always check for incoming data
@@ -54,7 +106,7 @@ public class Receiver implements Runnable {
 				//Should block until data comes in
 				byte[] packet = theRF.receive();
 				incoming = new Packet(packet);
-
+				
 				if (!incoming.integrityCheck()) {
 					if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a damaged packet");
 					continue;
@@ -62,50 +114,18 @@ public class Receiver implements Runnable {
 				
 				//If the data is meant for us, or for everyone, mark it
 				if (incoming.getDest() == this.ourMAC || incoming.getDest() == -1) {
-					ours = true;
-					if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a packet for us!");
+					if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a packet!");
+					if (incoming.getType() == Packet.FT_ACK) {
+						handleACK(incoming);
+					} else if (incoming.getType() == Packet.FT_DATA) {
+						handleData(incoming);
+					}
 				} else {
 					if (LinkLayer.debugLevel() == 2) output.println("Receiver: packet received, but it's not ours.");
 				}
 
 			} catch (Exception e){
-				if (LinkLayer.debugLevel() == 2) output.println("Receiver: rec interrupted!");
-			}
-
-			try {
-				if (incoming == null) {
-					if (LinkLayer.debugLevel() == 2) output.println("Receiver: error in viewing incoming packet");
-				} else {
-					// if ours, send data up, reset marker
-					if (ours) {
-						if (incoming.getType() == Packet.FT_ACK) {
-							if (LinkLayer.debugLevel() == 2) output.println("Received an ACK, passing to sender");
-							ackQueue.add(incoming);
-							continue;
-						}
-						if (incoming.getType() == Packet.FT_DATA) {
-							if (incoming.getDest() != -1) {
-								if (!incomingSeq.containsKey(incoming.getSrc())) {
-									incomingSeq.put(incoming.getSrc(), 0);
-								}
-								int seq = incomingSeq.get(incoming.getSrc());
-								if (incoming.getSeq() != seq) {
-									if (LinkLayer.debugLevel() > 0) output.println("Warning: received a packet with sequence number out of order.");
-								}
-								seq++;
-								incomingSeq.put(incoming.getSrc(), seq);
-							}
-							if (LinkLayer.debugLevel() == 2) output.println("Received a data packet");
-							received.put(incoming);
-							if (incoming.getDest() == this.ourMAC) {
-								sendAck(incoming);
-							}
-						}
-						ours = false;
-					}
-				}
-			} catch (Exception e){
-				if (LinkLayer.debugLevel() == 2) output.println("Receiver: error returning incoming packet");
+				if (LinkLayer.debugLevel() == 2) output.println("Receiver: error receiving packet!");
 			}
 		}
 	}
