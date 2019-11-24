@@ -48,7 +48,7 @@ public class Sender implements Runnable {
             // Need to find out when expCounter is supposed to increment, currently always waits aCWmin
             // resets on new packet to send
             int expCounter = 0;
-            int sendCount = 0;
+            int sendCount = 1;
 
             boolean sent = false;
             // Inner while loop in case need to resend current packet of data
