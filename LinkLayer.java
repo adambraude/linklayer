@@ -24,7 +24,7 @@ public class LinkLayer implements Dot11Interface
 	private short ourMAC;       // Our MAC address
 	private PrintWriter output; // The output stream we'll write to
 	
-	private static int debugLevel = 2;
+	private static int debugLevel = 1;
 
 	private Thread read;
 	private Thread writer;
@@ -39,7 +39,8 @@ public class LinkLayer implements Dot11Interface
 		this.ourMAC = ourMAC;
 		this.output = output;      
 		theRF = new RF(null, null);
-		if (debugLevel>0) output.println("LinkLayer: Constructor ran.");
+		if (debugLevel>0) output.println("LinkLayer initialized.");
+		output.println("Send command 0 for a list of commands");
 
 		// Launch threads
 		Receiver rec = new Receiver(theRF, ourMAC, output, received, ackQueue);
@@ -119,7 +120,21 @@ public class LinkLayer implements Dot11Interface
 	 * Passes command info to your link layer.  See docs for full description.
 	 */
 	public int command(int cmd, int val) {
-		if (debugLevel > 0) output.println("LinkLayer: Sending command "+cmd+" with value "+val);
+		if (debugLevel == 4) output.println("LinkLayer: Sending command "+cmd+" with value "+val);
+		if (cmd == 0) {
+			output.println(
+					"Available commands:\n"
+					+ "(0): help\n"
+					+ "(1,x): set debug level\n"
+					+ "\tx<1: silent mode"
+					+ "\n\tx=1: default"
+					+ "\n\tx=2: receiver details"
+					+ "\n\tx=3: sender details"
+					);
+		}
+		if (cmd == 0) {
+			debugLevel = val;
+		}
 		return 0;
 	}
 	
