@@ -54,41 +54,48 @@ public class Sender implements Runnable {
             // If a packet sent doesn't receive an ack, always go down right side of chart
             boolean cantSkip = false;
             // Inner while loop in case need to resend current packet of data
+            if (LinkLayer.debugLevel() == 3) output.println("Sender: Sending Packet");
             while (!sent) {
-                if (LinkLayer.debugLevel() == 2) output.println("Sender: Sending Packet attempt #"+sendCount);
+                if (LinkLayer.debugLevel() == 3) output.println("Sender: Sending Packet attempt #"+sendCount);
                 if (sendCount > RF.dot11RetryLimit) {
-                    if (LinkLayer.debugLevel() > 0) output.print("Sender: Packet reached send attempt limit");
+                    if (LinkLayer.debugLevel() == 3) output.print("Sender: Packet reached send attempt limit");
                     break;
                 }
                 // Do left half of the diagram
+                if (LinkLayer.debugLevel() == 3) output.println("Sender: Starting left half of flow chart");
                 boolean jumpToACK = false;
                 // if left side is viable, attempt it
                 if (!cantSkip) {
                     // If true, can skip to sending
+                    if (LinkLayer.debugLevel() == 3) output.println("Sender: Medium idle, send early");
                     jumpToACK = leftHalf(packet);
                 }
 
                 // Starting right part of diagram
+                if (LinkLayer.debugLevel() == 3) output.println("Sender: Start right half of flow diagram");
 
                 // If jumpToACK is true skip right DIFS waiting
                 if (!jumpToACK) rightDIFSWait();
 
                 // If packet hasn't been sent, go through exponential backoff wait time and send the packet
                 if (!jumpToACK) {
+                    if (LinkLayer.debugLevel() == 3) output.println("Sender: Starting Exponential Backoff");
                     int slotsToWait = calculateSlots(expCounter);
                     expBackoff(slotsToWait);
                 }
 
                 // Done waiting for exponential backoff, or is able to send early, so send data.
+                if (LinkLayer.debugLevel() == 3) output.println("Sender: Sent Data");
                 theRF.transmit(packet.getPacket());
 
                 // now need to wait for an ack to appear in the ack queue
+                if (LinkLayer.debugLevel() == 3) output.println("Sender: Waiting for ACK");
                 boolean gotACK = waitForACK(packet);
 
                 // Either move on to next packet, or remain on current
                 // If we got the wrong ack, increment exp and make sure packet has resent bit
                 if (!gotACK) {
-                    if (LinkLayer.debugLevel() == 2) output.println("Didn't receive ack, resending");
+                    if (LinkLayer.debugLevel() == 3) output.println("Sender: Didn't receive ack, resending");
                     if (!packet.getRetry()) {
                         packet = new Packet(packet.getSrc(), packet.getDest(), packet.getData(), packet.getType(), packet.getSeq(), true);
                     }
@@ -97,7 +104,7 @@ public class Sender implements Runnable {
                     cantSkip = true;
                 } else {
                     // If it is the correct ack, move on to the next packet.
-                    if (LinkLayer.debugLevel() == 2) output.print("ACK was for current packet, moving onto next one");
+                    if (LinkLayer.debugLevel() == 3) output.print("Sender: Received ACK, moving onto next packet");
                     sent = true;
                 }
             }
