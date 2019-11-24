@@ -1,6 +1,7 @@
 package wifi;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -19,6 +20,7 @@ public class LinkLayer implements Dot11Interface
 	private static ArrayBlockingQueue<Packet> received = new ArrayBlockingQueue<>(queue_size);
 	private static ArrayBlockingQueue<Packet> outgoingQueue = new ArrayBlockingQueue<>(queue_size);
 	private static ArrayBlockingQueue<Packet> ackQueue = new ArrayBlockingQueue<>(ack_size);
+	private HashMap<Short, Integer> outgoingSeq = new HashMap<>();
 	
 	private RF theRF;           // You'll need one of these eventually
 	private short ourMAC;       // Our MAC address
@@ -59,11 +61,17 @@ public class LinkLayer implements Dot11Interface
 	public int send(short dest, byte[] data, int len) {
 
 		if (debugLevel > 0) output.println("LinkLayer: Sending "+len+" bytes to "+dest);
-
-		//output.println("LinkLayer: Sending "+len+" bytes to "+dest);
-
+		
+		if (!outgoingSeq.containsKey(dest)) {
+			outgoingSeq.put(dest, 0);
+			if (debugLevel == 3) output.println("LinkLayer: new destination. Starting sequence at 0.");
+		} else {
+			if (debugLevel == 3) output.println("LinkLayer: sequence number is " + outgoingSeq.get(dest));
+		}
+		int seq = outgoingSeq.get(dest);
+		outgoingSeq.put(dest, seq+1);
 		// construct packet from dest, data, source is our mac address
-		Packet p = new Packet(ourMAC, dest, data, Packet.FT_DATA, 0, false);
+		Packet p = new Packet(ourMAC, dest, data, Packet.FT_DATA, seq, false);
 		outgoingQueue.add(p);
 
 		return Math.min(len, data.length);
@@ -132,7 +140,8 @@ public class LinkLayer implements Dot11Interface
 					+ "\n\tx=3: sender details"
 					);
 		}
-		if (cmd == 0) {
+		if (cmd == 1) {
+			output.println("Setting debug level to "+ val);
 			debugLevel = val;
 		}
 		return 0;
