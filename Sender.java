@@ -52,21 +52,6 @@ public class Sender implements Runnable {
             boolean sent = false;
             // Inner while loop in case need to resend current packet of data
             while (!sent) {
-                // When there is data to send, start
-                boolean inUse = theRF.inUse();
-
-                while (inUse) {
-                    try {
-                        Thread.sleep(RF.aSIFSTime);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping");
-                    }
-
-                    inUse = theRF.inUse();
-                }
-                theRF.transmit(packet.getPacket());
-
                 // Do left half of the diagram
                 // If  true, package has been sent, now waiting on ACK
                 // If false, medium was idle
@@ -94,7 +79,9 @@ public class Sender implements Runnable {
                 // If  we got the wrong ack, increment exp and make sure packet has resent bit
                 if (!gotACK) {
                     if (!packet.getRetry()) {
+                        System.out.println("Didn't recieve ack, resending");
                         packet = new Packet(packet.getSrc(), packet.getDest(), packet.getData(), packet.getType(), packet.getSeq(), true);
+                        System.out.println("Making new Packet");
                     }
                     expCounter ++;
                 } else {
@@ -220,7 +207,7 @@ public class Sender implements Runnable {
     private boolean waitForACK(int sqnc) {
         Packet ack = null;
         try {
-            ack = ackQueue.poll(10000, TimeUnit.MILLISECONDS);
+            ack = ackQueue.poll(20000, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             e.printStackTrace();
             if (LinkLayer.debugLevel() > 0) output.println("Sender: Error in waiting for ACK");
