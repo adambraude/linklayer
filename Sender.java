@@ -53,8 +53,7 @@ public class Sender implements Runnable {
             // Inner while loop in case need to resend current packet of data
             while (!sent) {
                 // Do left half of the diagram
-                // If  true, package has been sent, now waiting on ACK
-                // If false, medium was idle
+                // If true, can skip to sending
                 boolean jumpToACK = leftHalf(packet);
 
                 // Starting right part of diagram
@@ -66,17 +65,17 @@ public class Sender implements Runnable {
                 if (!jumpToACK) {
                     int slotsToWait = calculateSlots(expCounter);
                     expBackoff(slotsToWait);
-
-                    // Done waiting for exponential backoff, so send data.
-                    theRF.transmit(packet.getPacket());
                 }
+
+                // Done waiting for exponential backoff, or is able to send early, so send data.
+                theRF.transmit(packet.getPacket());
 
                 // now need to wait for an ack to appear in the ack queue
                 int sequence = packet.getSeq();
                 boolean gotACK = waitForACK(sequence);
 
                 // Either move on to next packet, or remain on current
-                // If  we got the wrong ack, increment exp and make sure packet has resent bit
+                // If we got the wrong ack, increment exp and make sure packet has resent bit
                 if (!gotACK) {
                     if (!packet.getRetry()) {
                         System.out.println("Didn't recieve ack, resending");
@@ -109,13 +108,9 @@ public class Sender implements Runnable {
                 output.println("Sender: error while sleeping DIFS");
             }
 
-            // If medium is still idle, send. This bypasses waiting through exp. backoff
-            // Either have a parameter, or deal with sending here. Have to skip to ACK section either way
+            // If medium is idle again, skip to sending the data, else go through right side
             inUse = theRF.inUse();
-            if (!inUse) {
-                theRF.transmit(packet.getPacket());
-                return true;
-            }
+            return !inUse;
         }
 
         //Else move to right half of diagram
@@ -147,15 +142,13 @@ public class Sender implements Runnable {
                 output.println("Sender: error while sleeping DIFS");
             }
 
-            // Then check if the thread is in use. If it is, reset back. If not, move forward.
+            // Then check if the thread is in use. If it is, reset back. If not, skip to send.
             inUse = theRF.inUse();
         }
     }
 
 	private int calculateSlots(int expCounter) {
-        // Pick exponential time here
         // exp backoff time is calculated by Random()*aSlotTime
-        // aSlotTime is constant
 
         // Slots are always 1 less than a power of two, so to find the base exponent:
         // base = log(aCWmin + 1)
@@ -206,15 +199,15 @@ public class Sender implements Runnable {
 
     private boolean waitForACK(int sqnc) {
         Packet ack = null;
+        // wait for ack for the timeout time
         try {
-            ack = ackQueue.poll(20000, TimeUnit.MILLISECONDS);
+            ack = ackQueue.poll(RF.aSlotTime*10, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             e.printStackTrace();
             if (LinkLayer.debugLevel() > 0) output.println("Sender: Error in waiting for ACK");
         }
 
-        // Create the packet with resend if it doesn't have it already
-        // If it is the correct ack, move on to the next packet.
+        // If we received an ACK, and it is for the correct packet, return true.
         return (ack != null && ack.getSeq() == sqnc);
     }
 }
