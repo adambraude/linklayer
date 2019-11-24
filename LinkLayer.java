@@ -56,7 +56,12 @@ public class LinkLayer implements Dot11Interface
 	 * of bytes to send.  See docs for full description.
 	 */
 	public int send(short dest, byte[] data, int len) {
+
 		if (debugLevel > 0) output.println("LinkLayer: Sending "+len+" bytes to "+dest);
+
+		//output.println("LinkLayer: Sending "+len+" bytes to "+dest);
+
+		// construct packet from dest, data, source is our mac address
 		Packet p = new Packet(ourMAC, dest, data, Packet.FT_DATA, 0, false);
 		outgoingQueue.add(p);
 
