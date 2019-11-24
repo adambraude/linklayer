@@ -48,10 +48,12 @@ public class Sender implements Runnable {
             // Need to find out when expCounter is supposed to increment, currently always waits aCWmin
             // resets on new packet to send
             int expCounter = 0;
+            int sendCount = 0;
 
             boolean sent = false;
             // Inner while loop in case need to resend current packet of data
             while (!sent) {
+                if (sendCount > RF.dot11RetryLimit) break;
                 // Do left half of the diagram
                 // If true, can skip to sending
                 boolean jumpToACK = leftHalf(packet);
@@ -72,17 +74,18 @@ public class Sender implements Runnable {
 
                 // now need to wait for an ack to appear in the ack queue
                 int sequence = packet.getSeq();
-                boolean gotACK = waitForACK(sequence);
+                boolean gotACK = waitForACK(packet);
 
                 // Either move on to next packet, or remain on current
                 // If we got the wrong ack, increment exp and make sure packet has resent bit
                 if (!gotACK) {
+                    //System.out.println("Didn't receive ack, resending");
                     if (!packet.getRetry()) {
-                        System.out.println("Didn't recieve ack, resending");
                         packet = new Packet(packet.getSrc(), packet.getDest(), packet.getData(), packet.getType(), packet.getSeq(), true);
-                        System.out.println("Making new Packet");
+                        //System.out.println("Making new Packet");
                     }
                     expCounter ++;
+                    sendCount ++;
                 } else {
                     // If it is the correct ack, move on to the next packet.
                     sent = true;
@@ -197,7 +200,9 @@ public class Sender implements Runnable {
         }
     }
 
-    private boolean waitForACK(int sqnc) {
+    private boolean waitForACK(Packet packet) {
+	    if (packet.getDest() == -1) return true;
+
         Packet ack = null;
         // wait for ack for the timeout time
         try {
@@ -208,6 +213,6 @@ public class Sender implements Runnable {
         }
 
         // If we received an ACK, and it is for the correct packet, return true.
-        return (ack != null && ack.getSeq() == sqnc);
+        return (ack != null && ack.getSeq() == packet.getSeq());
     }
 }
