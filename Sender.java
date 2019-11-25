@@ -173,6 +173,7 @@ public class Sender implements Runnable {
         // Slots are always 1 less than a power of two, so to find the base exponent:
         // base = log(aCWmin + 1)
         // and (2^(base+0))-1 = aCWmin
+        // Wait time can be zero
         int base = (int) (Math.log(RF.aCWmin + 1) / Math.log(2));
         int totalSlots = (int) Math.pow(2, base+expCounter)-1;
 
@@ -181,12 +182,7 @@ public class Sender implements Runnable {
 
         Random rng = new Random();
         // Generate a random number of slots to wait
-        int slotsToWait = (int) (rng.nextDouble()*totalSlots);
-
-        // Make sure we wait at least 1 slot
-        slotsToWait += 1;
-
-        return slotsToWait;
+        return (int) (rng.nextDouble()*totalSlots);
     }
 
     private void expBackoff(int slotsToWait) {
@@ -220,18 +216,40 @@ public class Sender implements Runnable {
 
     private boolean waitForACK(Packet packet) {
 	    if (packet.getDest() == -1) return true;
-
-        Packet ack = null;
-        // wait for ack for the timeout time
         int CONSTANT = 1000;
-        try {
-            ack = ackQueue.poll(RF.aSlotTime+RF.aSIFSTime+CONSTANT, TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            e.printStackTrace();
-            if (LinkLayer.debugLevel() > 0) output.println("Sender: Error in waiting for ACK");
-        }
 
-        // If we received an ACK, and it is for the correct packet, return true.
-        return (ack != null && ack.getSeq() == packet.getSeq());
+        int waitTime = RF.aSlotTime + RF.aSIFSTime + CONSTANT;
+
+        Packet ack;
+        // wait for ack for the timeout time
+        while (waitTime > 0) {
+            long start = theRF.clock();
+            try {
+                ack = ackQueue.poll(waitTime, TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
+                e.printStackTrace();
+                if (LinkLayer.debugLevel() > 0) output.println("Sender: Error in waiting for ACK");
+                break;
+            }
+            // Only get here if we have an ack, or wait entire poll time, in which case ack is null
+
+            // If we don't get an ack, return false
+            if (ack == null) {
+                return false;
+            }
+
+            // If we received the correct ACK return true.
+            if (ack.getSeq() == packet.getSeq()) {
+                return true;
+            }
+
+            // else we received an incorrect ACK.
+            // Ignore ACK and wait again, but with reduced time
+            long end = theRF.clock();
+            long timeWaiting = end-start;
+
+            waitTime -= (int) timeWaiting;
+        }
+        return false;
     }
 }
