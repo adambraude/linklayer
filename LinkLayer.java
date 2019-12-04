@@ -37,6 +37,18 @@ public class LinkLayer implements Dot11Interface
 	//Settings for slot selection
 	public static final int SS_RANDOM = 0;
 	public static final int SS_MAX = 1;
+	
+	//Status codes
+	public static final int STATUS_SUCCESS = 1;
+	public static final int STATUS_UNSPECIFIED_ERROR = 2;
+	public static final int STATUS_RF_INIT_FAILED = 3;
+	public static final int STATUS_TX_DELIVERED = 4;
+	public static final int STATUS_TX_FAILED = 5;
+	public static final int STATUS_BAD_BUF_SIZE = 6;
+	public static final int STATUS_BAD_ADDRESS = 7;
+	public static final int STATUS_BAD_MAC_ADDRESS = 8;
+	public static final int STATUS_ILLEGAL_ARGUMENT = 9;
+	public static final int STATUS_INSUFFICIENT_BUFFER_SPACE = 10;
 
 	
 
