@@ -22,6 +22,9 @@ public class Sender implements Runnable {
 
     // DIFS is defined as the SIFS time + 2*SlotTime
 	private static int DIFS = RF.aSIFSTime + 2*RF.aSlotTime;
+	
+	private static final int ACKTIME = 1000; //placeholder
+	private static final int BEACONTIME = 1000; //placeholder
 
 	
 	public Sender(RF theRF, short ourMAC, PrintWriter output, ArrayBlockingQueue<Packet> toSend,ArrayBlockingQueue<Packet> ackQueue) {
@@ -48,7 +51,7 @@ public class Sender implements Runnable {
             // Need to find out when expCounter is supposed to increment, currently always waits aCWmin
             // resets on new packet to send
             int expCounter = 0;
-            int sendCount = 1;
+            int sendCount = 0;
 
             boolean sent = false;
             // If a packet sent doesn't receive an ack, always go down right side of chart
@@ -181,8 +184,17 @@ public class Sender implements Runnable {
         if (totalSlots > RF.aCWmax) totalSlots = RF.aCWmax;
 
         Random rng = new Random();
+        
+        int toReturn = 0;
+        if (LinkLayer.slotSelection() == LinkLayer.SS_RANDOM) {
+        	toReturn = (int) (rng.nextDouble()*(totalSlots+1));
+        } else {
+        	toReturn = totalSlots;
+        }
+        
+        if (LinkLayer.debugLevel() == 3) output.print("Sender: Setting exponential backoff to " + toReturn +  " slots.");
         // Generate a random number of slots to wait
-        return (int) (rng.nextDouble()*totalSlots);
+        return toReturn;
     }
 
     private void expBackoff(int slotsToWait) {
@@ -216,9 +228,8 @@ public class Sender implements Runnable {
 
     private boolean waitForACK(Packet packet) {
 	    if (packet.getDest() == -1) return true;
-        int CONSTANT = 1000;
 
-        int waitTime = RF.aSlotTime + RF.aSIFSTime + CONSTANT;
+        int waitTime = RF.aSlotTime + RF.aSIFSTime + ACKTIME;
 
         Packet ack;
         // wait for ack for the timeout time

@@ -19,6 +19,8 @@ public class Receiver implements Runnable {
 	private ArrayBlockingQueue<Packet> received;
 	private ArrayBlockingQueue<Packet> ackQueue;
 	
+	private static final int BEACONTIME = 1000; //placeholder
+	
 	private HashMap<Short, Integer> incomingSeq = new HashMap<>();
 	private HashMap<Short, Integer> broadcastSeq = new HashMap<>();
 	

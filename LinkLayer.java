@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils.Rfc2396;
+
 import rf.RF;
 
 /**
@@ -14,7 +16,7 @@ import rf.RF;
  */
 public class LinkLayer implements Dot11Interface 
 {
-	private static final int queue_size = 16;
+	public static final int queue_size = 4; //limited buffering is TODO
 	private static final int ack_size = 2;
 	
 	private static ArrayBlockingQueue<Packet> received = new ArrayBlockingQueue<>(queue_size);
@@ -27,6 +29,16 @@ public class LinkLayer implements Dot11Interface
 	private PrintWriter output; // The output stream we'll write to
 	
 	private static int debugLevel = 1;
+	private static int slotSelection = 0;
+	private static int beaconInterval = 5000; //ms
+	private static int status = 0;
+	private static long offset = 0;
+	
+	//Settings for slot selection
+	public static final int SS_RANDOM = 0;
+	public static final int SS_MAX = 1;
+
+	
 
 	private Thread read;
 	private Thread writer;
@@ -121,7 +133,7 @@ public class LinkLayer implements Dot11Interface
 	 */
 	public int status() {
 		if (debugLevel > 0) output.println("LinkLayer: Faking a status() return value of 0");
-		return 0;
+		return status;
 	}
 
 	/**
@@ -144,10 +156,45 @@ public class LinkLayer implements Dot11Interface
 			output.println("Setting debug level to "+ val);
 			debugLevel = val;
 		}
+		if (cmd == 2) {
+			if (val == SS_RANDOM) {
+				slotSelection = SS_RANDOM;
+				output.println("Setting slot selection to random");
+			} else if (val == SS_MAX) {
+				slotSelection = SS_MAX;
+				output.println("Setting slot selection to use the maximum possible time");
+			} else {
+				output.println("Invalid slot selection setting.");
+			}
+		}
+		if (cmd == 3) {
+			if (val > 0) {
+				output.println("Setting beacon interval to "+ val + " seconds");
+			} else {
+				output.println("Beacons are disabled.");
+			}
+			beaconInterval = val*1000;
+		}
 		return 0;
 	}
 	
 	protected static int debugLevel() {
 		return debugLevel;
+	}
+	
+	protected static int slotSelection() {
+		return slotSelection;
+	}
+	
+	protected static int beaconInterval() {
+		return beaconInterval;
+	}
+	
+	protected static long getTime(RF rf) {
+		return rf.clock() + offset;
+	}
+	
+	protected static void addToOffset(long adjust) {
+		offset += adjust;
 	}
 }
