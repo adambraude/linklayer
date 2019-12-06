@@ -55,7 +55,7 @@ public class Sender implements Runnable {
 
             boolean sent = false;
             // If a packet sent doesn't receive an ack, always go down right side of chart
-            boolean cantSkip = false;
+            boolean canSkip = true;
             // Inner while loop in case need to resend current packet of data
             if (LinkLayer.debugLevel() == 3) output.println("Sender: Sending Packet");
             while (!sent) {
@@ -68,17 +68,19 @@ public class Sender implements Runnable {
                 if (LinkLayer.debugLevel() == 3) output.println("Sender: Starting left half of flow chart");
                 boolean jumpToACK = false;
                 // if left side is viable, attempt it
-                if (!cantSkip) {
+                if (canSkip) {
                     // If true, can skip to sending
                     if (LinkLayer.debugLevel() == 3) output.println("Sender: Medium idle, send early");
                     jumpToACK = leftHalf(packet);
                 }
 
                 // Starting right part of diagram
-                if (LinkLayer.debugLevel() == 3) output.println("Sender: Start right half of flow diagram");
 
                 // If jumpToACK is true skip right DIFS waiting
-                if (!jumpToACK) rightDIFSWait();
+                if (!jumpToACK) {
+                    if (LinkLayer.debugLevel() == 3) output.println("Sender: Start right half of flow diagram");
+                    rightDIFSWait();
+                }
 
                 // If packet hasn't been sent, go through exponential backoff wait time and send the packet
                 if (!jumpToACK) {
@@ -104,7 +106,7 @@ public class Sender implements Runnable {
                     }
                     expCounter ++;
                     sendCount ++;
-                    cantSkip = true;
+                    canSkip = false;
                 } else {
                     // If it is the correct ack, move on to the next packet.
                     if (LinkLayer.debugLevel() == 3) output.print("Sender: Received ACK, moving onto next packet");
@@ -187,6 +189,8 @@ public class Sender implements Runnable {
         
         int toReturn = 0;
         if (LinkLayer.slotSelection() == LinkLayer.SS_RANDOM) {
+            // The plus one makes the range of slots [1, totalSlots+1], so
+            // multiplying by a double makes the range for possible slots [0, totalSlots]
         	toReturn = (int) (rng.nextDouble()*(totalSlots+1));
         } else {
         	toReturn = totalSlots;
