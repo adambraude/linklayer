@@ -267,4 +267,11 @@ public class Sender implements Runnable {
         }
         return false;
     }
+    
+    //Rounds a long number up to the nearest 50
+    private long roundToFifty(long in) {
+    	//Ex: 87%50=37. 50-37=13. 87+13 = 100.
+    	long out = in+(50-(in%50));
+    	return out;
+    }
 }
