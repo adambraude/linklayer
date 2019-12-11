@@ -63,10 +63,17 @@ public class LinkLayer implements Dot11Interface
 	 */
 	public LinkLayer(short ourMAC, PrintWriter output) {
 		this.ourMAC = ourMAC;
-		this.output = output;      
-		theRF = new RF(null, null);
+		this.output = output;
+
+		try {
+            theRF = new RF(null, null);
+        } catch (Exception e) {
+            if (debugLevel > 0) output.println("LinkLayer: Error in Making the RF layer");
+		    LinkLayer.setStatus(STATUS_RF_INIT_FAILED);
+        }
+
 		if (debugLevel>0) output.println("LinkLayer initialized.");
-        LinkLayer.setStatus(1);
+        LinkLayer.setStatus(STATUS_SUCCESS);
 		output.println("Send command 0 for a list of commands");
 
 		// Launch threads
@@ -114,7 +121,7 @@ public class LinkLayer implements Dot11Interface
 			incoming = received.take();
 		} catch (Exception e) {
 			if (debugLevel > 0) output.println("Didn't receive a packet, or ran into an error");
-            LinkLayer.setStatus(2);
+            LinkLayer.setStatus(STATUS_UNSPECIFIED_ERROR);
 			return -1;
 		}
 
@@ -132,7 +139,7 @@ public class LinkLayer implements Dot11Interface
             //As per the specification, the remaining data is discarded
 		} catch (Exception e) {
 			if (debugLevel > 0) output.println("LinkLayer: Error when copying data");
-            LinkLayer.setStatus(2);
+            LinkLayer.setStatus(STATUS_UNSPECIFIED_ERROR);
 			return -1;
 		}
 
@@ -149,7 +156,7 @@ public class LinkLayer implements Dot11Interface
 	public int status() {
 	    if (status < 1 || status > 10) {
             if (debugLevel > 0) output.println("LinkLayer: Status is an illegal value");
-            setStatus(2);
+            setStatus(STATUS_UNSPECIFIED_ERROR);
         }
 	    return status;
 	}
@@ -183,7 +190,7 @@ public class LinkLayer implements Dot11Interface
 				output.println("Setting slot selection to use the maximum possible time");
 			} else {
 				output.println("Invalid slot selection setting.");
-                LinkLayer.setStatus(2);
+                LinkLayer.setStatus(STATUS_UNSPECIFIED_ERROR);
 			}
 		}
 		if (cmd == 3) {

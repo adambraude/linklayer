@@ -44,7 +44,7 @@ public class Receiver implements Runnable {
 			theRF.transmit(ack.getPacket());
 		} catch (Exception e) {
 			if (LinkLayer.debugLevel() == 2) output.println("Receiver: error trying to sleep.");
-            LinkLayer.setStatus(2);
+            LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
 		}
 	}
 	
@@ -94,7 +94,7 @@ public class Receiver implements Runnable {
 		}
 		catch (Exception e) {
 			if (LinkLayer.debugLevel() == 2) output.println("Receiver: error passing packet to LinkLayer");
-            LinkLayer.setStatus(2);
+            LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
 		}
 		if (incoming.getDest() == this.ourMAC) {
 			sendAck(incoming);
@@ -114,7 +114,7 @@ public class Receiver implements Runnable {
             return;
         }
         if (LinkLayer.debugLevel() == 2) output.println("Receiver: adjustClock called on a packet that isn't a Beacon");
-        LinkLayer.setStatus(2);
+        LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
     }
 
 	@Override
@@ -153,7 +153,7 @@ public class Receiver implements Runnable {
 
 			} catch (Exception e){
 				if (LinkLayer.debugLevel() == 2) output.println("Receiver: error receiving packet!");
-                LinkLayer.setStatus(2);
+                LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
 			}
 		}
 	}

@@ -45,7 +45,7 @@ public class Sender implements Runnable {
                 packet = toSend.take();
             } catch (Exception e) {
                 if (LinkLayer.debugLevel() > 0) output.println("Sender: error while retrieving packet");
-                LinkLayer.setStatus(2);
+                LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
                 continue;
             }
 
@@ -63,7 +63,7 @@ public class Sender implements Runnable {
                 if (LinkLayer.debugLevel() == 3) output.println("Sender: Sending Packet attempt #"+sendCount);
                 if (sendCount > RF.dot11RetryLimit) {
                     if (LinkLayer.debugLevel() == 3) output.print("Sender: Packet reached send attempt limit");
-                    LinkLayer.setStatus(3);
+                    LinkLayer.setStatus(LinkLayer.STATUS_TX_FAILED);
                     break;
                 }
                 // Do left half of the diagram
@@ -112,7 +112,7 @@ public class Sender implements Runnable {
                 } else {
                     // If it is the correct ack, move on to the next packet.
                     if (LinkLayer.debugLevel() == 3) output.print("Sender: Received ACK, moving onto next packet");
-                    LinkLayer.setStatus(4);
+                    LinkLayer.setStatus(LinkLayer.STATUS_TX_DELIVERED);
                     sent = true;
                 }
             }
@@ -134,7 +134,7 @@ public class Sender implements Runnable {
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping DIFS");
-                LinkLayer.setStatus(2);
+                LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
             }
 
             // If medium is idle again, skip to sending the data, else go through right side
@@ -158,7 +158,7 @@ public class Sender implements Runnable {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                     if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping");
-                    LinkLayer.setStatus(2);
+                    LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
                 }
 
                 inUse = theRF.inUse();
@@ -170,7 +170,7 @@ public class Sender implements Runnable {
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping DIFS");
-                LinkLayer.setStatus(2);
+                LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
             }
 
             // Then check if the thread is in use. If it is, reset back. If not, skip to send.
@@ -218,7 +218,7 @@ public class Sender implements Runnable {
                 } catch (Exception e) {
                     e.printStackTrace();
                     if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping");
-                    LinkLayer.setStatus(2);
+                    LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
                 }
 
                 slotsToWait --;
@@ -232,7 +232,7 @@ public class Sender implements Runnable {
                 } catch (Exception e) {
                     e.printStackTrace();
                     if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping");
-                    LinkLayer.setStatus(2);
+                    LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
                 }
             }
         }
@@ -252,7 +252,7 @@ public class Sender implements Runnable {
             } catch (Exception e) {
                 e.printStackTrace();
                 if (LinkLayer.debugLevel() > 0) output.println("Sender: Error in waiting for ACK");
-                LinkLayer.setStatus(2);
+                LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
                 break;
             }
             // Only get here if we have an ack, or wait entire poll time, in which case ack is null
