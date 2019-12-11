@@ -130,16 +130,6 @@ public class Receiver implements Runnable {
 					if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a damaged packet");
 					continue;
 				}
-
-				// If the destination is the same as the source, it should be a beacon frame
-				if (incoming.getDest() == incoming.getSrc()) {
-				    if (incoming.getType() == Packet.FT_BEACON) {
-				        // if it is a beacon, handle it then move on to next packet
-                        if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a Beacon!");
-				        adjustClock(incoming, beaconTime);
-				        continue;
-                    }
-                }
 				
 				//If the data is meant for us, or for everyone, mark it
 				if (incoming.getDest() == this.ourMAC || incoming.getDest() == -1) {
@@ -148,7 +138,12 @@ public class Receiver implements Runnable {
 						handleACK(incoming);
 					} else if (incoming.getType() == Packet.FT_DATA && received.size() <= MAX_PACKETS) {
 						handleData(incoming);
-					}
+					}  else if (incoming.getType() == Packet.FT_BEACON) {
+                        if (incoming.getType() == Packet.FT_BEACON) {
+                            if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a Beacon!");
+                            adjustClock(incoming, beaconTime);
+                        }
+                    }
 				} else {
 					if (LinkLayer.debugLevel() == 2) output.println("Receiver: packet received, but it's not ours.");
 				}
