@@ -37,7 +37,7 @@ public class Packet {
 	 * @param seq the sequence number (should be a 12-bit int)
 	 * @param retry whether this is a retry
 	 */
-	public Packet (short src, short dest, byte [] data, int type, int seq,boolean retry) {
+	public Packet (short src, short dest, byte [] data, int type, int seq, boolean retry) {
 		if (data.length > MAX_DATA) {
 			throw new IllegalArgumentException("Maximum packet length of " + MAX_DATA + " exceeded.");
 		}
@@ -76,6 +76,21 @@ public class Packet {
 	 */
 	public Packet (byte[] received) {
 		packet = received;
+	}
+	
+	/**
+	 * Make a beacon frame with a given timestamp
+	 * @param src the caller's MAC address
+	 * @param timestamp the current time in miliseconds
+	 * @return a beacon packet
+	 */
+	public static Packet makeBeacon(short src, long timestamp) {
+		byte[] data = new byte[8];
+		for (int i = 0; i < 8; i++) {
+			data[data.length-1-i] = (byte)(timestamp>>8*i);
+		}
+		Packet p = new Packet(src, (short)-1, data, FT_BEACON, 0, false);
+		return p;
 	}
 	
 	/**
@@ -197,6 +212,16 @@ public class Packet {
 	// Unit-testing
 	public static void main(String[] args) {
 		Packet p = new Packet((short)555,(short)229,new byte[50], FT_CTS, 4092, true);
+		System.out.println("Is this a retry? " + p.getRetry());
+		System.out.println("Seq?: " + p.getSeq() + " Expected: 4092");
+		System.out.println("Type?: " + p.getType() + " Expected: " + FT_CTS);
+		System.out.println("Dest: " + p.getDest());
+		System.out.println("Src: " + p.getSrc());
+		System.out.println("Checksum good? " + p.integrityCheck());
+		System.out.println(p);
+		
+
+		p = makeBeacon((short)100, System.currentTimeMillis());
 		System.out.println("Is this a retry? " + p.getRetry());
 		System.out.println("Seq?: " + p.getSeq() + " Expected: 4092");
 		System.out.println("Type?: " + p.getType() + " Expected: " + FT_CTS);
