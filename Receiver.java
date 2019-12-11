@@ -20,12 +20,13 @@ public class Receiver implements Runnable {
 	private ArrayBlockingQueue<Packet> ackQueue;
 	
 	private static final int BEACONTIME = 1000; //placeholder
+    private static final int MAX_PACKETS = 4;
 	
 	private HashMap<Short, Integer> incomingSeq = new HashMap<>();
 	private HashMap<Short, Integer> broadcastSeq = new HashMap<>();
-	
+
 	public Receiver(RF theRF, short ourMAC, PrintWriter output, ArrayBlockingQueue<Packet> received, ArrayBlockingQueue<Packet> ackQueue) {
-		this.theRF = theRF;
+        this.theRF = theRF;
 		this.ourMAC = ourMAC;
 		this.output = output;
 		this.received = received;
@@ -97,29 +98,55 @@ public class Receiver implements Runnable {
 			sendAck(incoming);
 		}
 	}
-	
+
+	private void adjustClock(Packet packet, long time) {
+	    long beaconTime = packet.getBeaconTime();
+	    if (beaconTime != -1) {
+	        long unpackTime = LinkLayer.getTime(theRF)-time;
+	        long adjustedTime = beaconTime + unpackTime;
+	        long dif = adjustedTime-LinkLayer.getTime(theRF);
+	        if (adjustedTime > 0) {
+                if (LinkLayer.debugLevel() == 2) output.println("Receiver: Clock Time adjusted");
+	            LinkLayer.addToOffset(dif);
+            }
+            return;
+        }
+        if (LinkLayer.debugLevel() == 2) output.println("Receiver: adjustClock called on a packet that isn't a Beacon");
+    }
+
 	@Override
 	public void run() {
-		Packet incoming = null;
+		Packet incoming;
 
 		// Always check for incoming data
 		while (true) {
 			try {
 				//Should block until data comes in
 				byte[] packet = theRF.receive();
+				long beaconTime = LinkLayer.getTime(theRF);
 				incoming = new Packet(packet);
 				
 				if (!incoming.integrityCheck()) {
 					if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a damaged packet");
 					continue;
 				}
+
+				// If the destination is the same as the source, it should be a beacon frame
+				if (incoming.getDest() == incoming.getSrc()) {
+				    if (incoming.getType() == Packet.FT_BEACON) {
+				        // if it is a beacon, handle it then move on to next packet
+                        if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a Beacon!");
+				        adjustClock(incoming, beaconTime);
+				        continue;
+                    }
+                }
 				
 				//If the data is meant for us, or for everyone, mark it
 				if (incoming.getDest() == this.ourMAC || incoming.getDest() == -1) {
 					if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a packet!");
 					if (incoming.getType() == Packet.FT_ACK) {
 						handleACK(incoming);
-					} else if (incoming.getType() == Packet.FT_DATA) {
+					} else if (incoming.getType() == Packet.FT_DATA && received.size() <= MAX_PACKETS) {
 						handleData(incoming);
 					}
 				} else {

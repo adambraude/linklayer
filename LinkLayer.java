@@ -144,8 +144,12 @@ public class LinkLayer implements Dot11Interface
 	 * Returns a current status code.  See docs for full description.
 	 */
 	public int status() {
-		if (debugLevel > 0) output.println("LinkLayer: Faking a status() return value of 0");
-		return status;
+	    if (status < 1 || status > 10) {
+            if (debugLevel > 0) output.println("LinkLayer: Status is an illegal value");
+            return 2;
+        } else {
+            return status;
+        }
 	}
 
 	/**
@@ -209,4 +213,10 @@ public class LinkLayer implements Dot11Interface
 	protected static void addToOffset(long adjust) {
 		offset += adjust;
 	}
+
+	protected static void setStatus(int val) {
+        if (val > 0 && val < 11) {
+            status = val;
+        }
+    }
 }

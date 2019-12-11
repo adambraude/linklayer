@@ -151,6 +151,18 @@ public class Packet {
 		}
 		return data;
 	}
+
+    /**
+     * Takes the data in the packet and converts it to a long. Used for adjusting clock times
+     * from beacons
+     * @return returns a long that is the time from a beacon, or -1 if the packet isn't a beacon
+     */
+	public long getBeaconTime() {
+	    if (getType() != FT_BEACON) return -1;
+
+	    // beacon frames have 8 bytes of data for the clock
+	    return bytesToInt(6, 13);
+    }
 	
 	/**
 	 * Returns the packet as a byte array

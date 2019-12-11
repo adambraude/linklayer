@@ -66,24 +66,24 @@ public class Sender implements Runnable {
                 }
                 // Do left half of the diagram
                 if (LinkLayer.debugLevel() == 3) output.println("Sender: Starting left half of flow chart");
-                boolean jumpToACK = false;
+                boolean jumpToSend = false;
                 // if left side is viable, attempt it
                 if (canSkip) {
                     // If true, can skip to sending
                     if (LinkLayer.debugLevel() == 3) output.println("Sender: Medium idle, send early");
-                    jumpToACK = leftHalf(packet);
+                    jumpToSend = leftHalf(packet);
                 }
 
                 // Starting right part of diagram
 
-                // If jumpToACK is true skip right DIFS waiting
-                if (!jumpToACK) {
+                // If jumpToSend is true skip right DIFS waiting
+                if (!jumpToSend) {
                     if (LinkLayer.debugLevel() == 3) output.println("Sender: Start right half of flow diagram");
                     rightDIFSWait();
                 }
 
                 // If packet hasn't been sent, go through exponential backoff wait time and send the packet
-                if (!jumpToACK) {
+                if (!jumpToSend) {
                     if (LinkLayer.debugLevel() == 3) output.println("Sender: Starting Exponential Backoff");
                     int slotsToWait = calculateSlots(expCounter);
                     expBackoff(slotsToWait);
