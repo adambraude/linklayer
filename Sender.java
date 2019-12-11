@@ -274,4 +274,14 @@ public class Sender implements Runnable {
     	long out = in+(50-(in%50));
     	return out;
     }
+    
+    private void sleepRounded(long waitTime) {
+    	long t = LinkLayer.getTime(theRF);
+    	long endTime = roundToFifty(t + waitTime);
+    	try {
+    		Thread.sleep(endTime-t);
+    	} catch (Exception e) {
+    		LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
+    	}
+    }
 }
