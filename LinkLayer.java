@@ -66,6 +66,7 @@ public class LinkLayer implements Dot11Interface
 		this.output = output;      
 		theRF = new RF(null, null);
 		if (debugLevel>0) output.println("LinkLayer initialized.");
+        LinkLayer.setStatus(1);
 		output.println("Send command 0 for a list of commands");
 
 		// Launch threads
@@ -113,6 +114,7 @@ public class LinkLayer implements Dot11Interface
 			incoming = received.take();
 		} catch (Exception e) {
 			if (debugLevel > 0) output.println("Didn't receive a packet, or ran into an error");
+            LinkLayer.setStatus(2);
 			return -1;
 		}
 
@@ -130,6 +132,7 @@ public class LinkLayer implements Dot11Interface
             //As per the specification, the remaining data is discarded
 		} catch (Exception e) {
 			if (debugLevel > 0) output.println("LinkLayer: Error when copying data");
+            LinkLayer.setStatus(2);
 			return -1;
 		}
 
@@ -146,10 +149,9 @@ public class LinkLayer implements Dot11Interface
 	public int status() {
 	    if (status < 1 || status > 10) {
             if (debugLevel > 0) output.println("LinkLayer: Status is an illegal value");
-            return 2;
-        } else {
-            return status;
+            setStatus(2);
         }
+	    return status;
 	}
 
 	/**
@@ -181,6 +183,7 @@ public class LinkLayer implements Dot11Interface
 				output.println("Setting slot selection to use the maximum possible time");
 			} else {
 				output.println("Invalid slot selection setting.");
+                LinkLayer.setStatus(2);
 			}
 		}
 		if (cmd == 3) {
