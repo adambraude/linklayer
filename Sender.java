@@ -1,6 +1,7 @@
 package wifi;
 import rf.RF;
 import java.io.PrintWriter;
+import java.util.Date;
 import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -24,7 +25,17 @@ public class Sender implements Runnable {
 	private static int DIFS = RF.aSIFSTime + 2*RF.aSlotTime;
 	
 	private static final int ACKTIME = 1000; //placeholder
-	private static final int BEACONTIME = 1000; //placeholder
+	
+	//Measured with Win10/2.5Ghz i5/8GB RAM
+	private static final int BEACONTIME = 1820;
+	
+	//absolute time of the next beacon, in ms
+	private long nextBeacon;
+	
+	//used internally to calculate average beacon send times
+	private long btotal = 0;
+	private long bnum = 0;
+	private float bvg=0;
 
 	
 	public Sender(RF theRF, short ourMAC, PrintWriter output, ArrayBlockingQueue<Packet> toSend,ArrayBlockingQueue<Packet> ackQueue) {
@@ -33,6 +44,7 @@ public class Sender implements Runnable {
 		this.output = output;
 		this.toSend = toSend;
 		this.ackQueue = ackQueue;
+		nextBeacon = LinkLayer.getTime(theRF) + LinkLayer.beaconInterval();
 	}
 	
 	@Override
@@ -41,11 +53,39 @@ public class Sender implements Runnable {
         while (true) {
             Packet packet;
             // Wait for data to send
-            try {
-                packet = toSend.take();
-            } catch (Exception e) {
-                if (LinkLayer.debugLevel() > 0) output.println("Sender: error while retrieving packet");
-                continue;
+            if (LinkLayer.beaconInterval() <= 0) {
+            	//Beacons disabled
+            	try {
+                    packet = toSend.take();
+                } catch (Exception e) {
+                    if (LinkLayer.debugLevel() > 0) output.println("Sender: error while retrieving packet");
+                    continue;
+                }
+            } else {
+            	if (LinkLayer.getTime(theRF)>nextBeacon) {
+                	long t = LinkLayer.getTime(theRF)+BEACONTIME;
+                	if (LinkLayer.debugLevel() == 5) output.println("Sending beacon with time " +t);
+                	packet = Packet.makeBeacon(ourMAC, t);
+                } else {
+                	try {
+                		if (LinkLayer.debugLevel() == 5) output.println("Waiting for next beacon at time " +nextBeacon);
+                        packet = toSend.poll(nextBeacon-LinkLayer.getTime(theRF),TimeUnit.MILLISECONDS);
+                    } catch (Exception e) {
+                        if (LinkLayer.debugLevel() > 0) output.println("Sender: error while retrieving packet");
+                        continue;
+                    }
+                	if (packet == null) {
+                		long t = LinkLayer.getTime(theRF)+BEACONTIME;
+                		if (LinkLayer.debugLevel() == 5) output.println("Sending beacon with time " +t);
+                    	packet = Packet.makeBeacon(ourMAC, t);
+                	}
+                }
+            }
+            if (packet.getType() == Packet.FT_BEACON) {
+            	while (nextBeacon < LinkLayer.getTime(theRF) && LinkLayer.beaconInterval() >0) {
+            		nextBeacon+=LinkLayer.beaconInterval();
+            	}
+        		if (LinkLayer.debugLevel() == 5) output.println("Setting next beacon time to " +nextBeacon);
             }
 
             // Need to find out when expCounter is supposed to increment, currently always waits aCWmin
@@ -90,8 +130,26 @@ public class Sender implements Runnable {
                 }
 
                 // Done waiting for exponential backoff, or is able to send early, so send data.
-                if (LinkLayer.debugLevel() == 3) output.println("Sender: Sent Data");
+                if (LinkLayer.debugLevel() == 3) output.println("Sender: Sending Data");
+                long st=LinkLayer.getTime(theRF);
+                if (packet.getType() == Packet.FT_BEACON) {
+                	//Per Brad's instructions, rebuild the packet right before sending
+                	packet = Packet.makeBeacon(ourMAC, LinkLayer.getTime(theRF)+BEACONTIME);
+                }
+                
                 theRF.transmit(packet.getPacket());
+                
+                if (packet.getType() == Packet.FT_BEACON) {
+            		if (LinkLayer.debugLevel() == 5) {
+            			output.println("Sent beacon with time " +packet.getBeaconTime());
+            			long ed = LinkLayer.getTime(theRF);
+            			bnum++;
+            			btotal += ed-st;
+            			bvg = btotal/(float)bnum;
+            			output.println("Took " + (ed-st) + " ms to send.");
+            			output.println("Average send time for all beacons: " +bvg + " ms.");
+            		}
+                }
 
                 // now need to wait for an ack to appear in the ack queue
                 if (LinkLayer.debugLevel() == 3) output.println("Sender: Waiting for ACK");
@@ -126,12 +184,7 @@ public class Sender implements Runnable {
 
         // if the medium is immediately idle, wait DIFS
         if (firstTry) {
-            try {
-                Thread.sleep(DIFS);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping DIFS");
-            }
+            sleepRounded(DIFS);
 
             // If medium is idle again, skip to sending the data, else go through right side
             inUse = theRF.inUse();
@@ -148,24 +201,13 @@ public class Sender implements Runnable {
         while (inUse) {
             // If medium was busy first try, or after the second check, wait for medium to not be idle
             while (inUse) {
-                try {
-                    // If medium not idle, wait sifs and a slot time as specified
-                    Thread.sleep(RF.aSIFSTime+RF.aSlotTime);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping");
-                }
+                // If medium not idle, wait sifs and a slot time as specified
+                sleepRounded(RF.aSIFSTime+RF.aSlotTime);
 
                 inUse = theRF.inUse();
             }
 
-            // Then wait DIFS
-            try {
-                Thread.sleep(DIFS);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping DIFS");
-            }
+            sleepRounded(DIFS);
 
             // Then check if the thread is in use. If it is, reset back. If not, skip to send.
             inUse = theRF.inUse();
@@ -207,25 +249,13 @@ public class Sender implements Runnable {
         while (slotsToWait != 0) {
             // If the medium is idle, wait for a slot, and count down
             if (!theRF.inUse()) {
-                try {
-                    Thread.sleep(RF.aSlotTime);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping");
-                }
-
+                sleepRounded(RF.aSlotTime);
                 slotsToWait --;
             }
             // If the medium is not idle, wait for it to be idle
             else {
                 // Wait for medium to be idle again
-                try {
-                    // wait sifs and a slot time as specified
-                    Thread.sleep(RF.aSIFSTime+RF.aSlotTime);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    if (LinkLayer.debugLevel() > 0) output.println("Sender: error while sleeping");
-                }
+                sleepRounded(RF.aSIFSTime+RF.aSlotTime);
             }
         }
     }
@@ -238,7 +268,7 @@ public class Sender implements Runnable {
         Packet ack;
         // wait for ack for the timeout time
         while (waitTime > 0) {
-            long start = theRF.clock();
+            long start = LinkLayer.getTime(theRF);
             try {
                 ack = ackQueue.poll(waitTime, TimeUnit.MILLISECONDS);
             } catch (Exception e) {
@@ -260,7 +290,7 @@ public class Sender implements Runnable {
 
             // else we received an incorrect ACK.
             // Ignore ACK and wait again, but with reduced time
-            long end = theRF.clock();
+            long end = LinkLayer.getTime(theRF);
             long timeWaiting = end-start;
 
             waitTime -= (int) timeWaiting;

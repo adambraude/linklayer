@@ -166,6 +166,8 @@ public class LinkLayer implements Dot11Interface
 					+ "\n\tx=1: default"
 					+ "\n\tx=2: receiver details"
 					+ "\n\tx=3: sender details"
+					+ "\n\tx=4: link layer details"
+					+ "\n\tx=5: beacon layer details"
 					);
 		}
 		if (cmd == 1) {
@@ -186,6 +188,10 @@ public class LinkLayer implements Dot11Interface
 		if (cmd == 3) {
 			if (val > 0) {
 				output.println("Setting beacon interval to "+ val + " seconds");
+				if (beaconInterval <0 && outgoingQueue.isEmpty()) {
+					//if beacons have just been re-enabled, make sure one gets sent
+					outgoingQueue.add(Packet.makeBeacon(ourMAC, LinkLayer.getTime(theRF)));
+				}
 			} else {
 				output.println("Beacons are disabled.");
 			}
