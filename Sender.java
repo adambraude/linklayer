@@ -85,7 +85,6 @@ public class Sender implements Runnable {
             	while (nextBeacon < LinkLayer.getTime(theRF) && LinkLayer.beaconInterval() >0) {
             		nextBeacon+=LinkLayer.beaconInterval();
             	}
-        		if (LinkLayer.debugLevel() == 5) output.println("Setting next beacon time to " +nextBeacon);
             }
 
             // Need to find out when expCounter is supposed to increment, currently always waits aCWmin
@@ -99,12 +98,12 @@ public class Sender implements Runnable {
             // Inner while loop in case need to resend current packet of data
             if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.println("Sender: Sending Packet");
             while (!sent) {
-                if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.println("Sender: Sending Packet attempt #"+sendCount);
                 if (sendCount > RF.dot11RetryLimit) {
                     if (LinkLayer.debugLevel() == 3&& packet.getType()!=Packet.FT_BEACON) output.print("Sender: Packet reached send attempt limit");
                     LinkLayer.setStatus(LinkLayer.STATUS_TX_FAILED);
                     break;
                 }
+                if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.println("Sender: Sending Packet attempt #"+sendCount);
                 // Do left half of the diagram
                 if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.println("Sender: Starting left half of flow chart");
                 boolean jumpToSend = false;

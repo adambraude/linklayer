@@ -174,9 +174,21 @@ public class LinkLayer implements Dot11Interface
 	public int command(int cmd, int val) {
 		if (debugLevel == 4) output.println("LinkLayer: Sending command "+cmd+" with value "+val);
 		if (cmd == 0) {
+			output.println("Status: " + LinkLayer.status);
+			output.println("Debug level: " + LinkLayer.debugLevel);
+			if (slotSelection == SS_RANDOM) {
+				output.println("Slot selection is random.");
+			} else {
+				output.println("Slot selection is fixed.");
+			}
+			if (beaconInterval > 0) {
+				output.println("Sending beacons every "+ beaconInterval + " seconds");
+			} else {
+				output.println("Beacons are disabled.");
+			}
 			output.println(
 					"Available commands:\n"
-					+ "(0): help\n"
+					+ "(0): current settings and help\n"
 					+ "(1,x): set debug level\n"
 					+ "\tx<1: silent mode"
 					+ "\n\tx=1: default"
