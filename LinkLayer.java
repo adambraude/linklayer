@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils.Rfc2396;
+//import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils.Rfc2396;
 
 import rf.RF;
 
@@ -30,7 +30,7 @@ public class LinkLayer implements Dot11Interface
 	
 	private static int debugLevel = 1;
 	private static int slotSelection = 0;
-	private static int beaconInterval = 5000; //ms
+	private static int beaconInterval = 8000; //ms
 	private static int status = 0;
 	private static long offset = 0;
 	
@@ -63,9 +63,17 @@ public class LinkLayer implements Dot11Interface
 	 */
 	public LinkLayer(short ourMAC, PrintWriter output) {
 		this.ourMAC = ourMAC;
-		this.output = output;      
-		theRF = new RF(null, null);
+		this.output = output;
+
+		try {
+            theRF = new RF(null, null);
+        } catch (Exception e) {
+            if (debugLevel > 0) output.println("LinkLayer: Error in Making the RF layer");
+		    LinkLayer.setStatus(STATUS_RF_INIT_FAILED);
+        }
+
 		if (debugLevel>0) output.println("LinkLayer initialized.");
+        LinkLayer.setStatus(STATUS_SUCCESS);
 		output.println("Send command 0 for a list of commands");
 
 		// Launch threads
@@ -106,13 +114,14 @@ public class LinkLayer implements Dot11Interface
 	 * the Transmission object.  See docs for full description.
 	 */
 	public int recv(Transmission t) {
-		if (debugLevel > 0) output.println("LinkLayer: blocking on recv()");
+		if (debugLevel == 4) output.println("LinkLayer: blocking on recv()");
 		// Block until we receive the data meant for us
 		Packet incoming;
 		try {
 			incoming = received.take();
 		} catch (Exception e) {
 			if (debugLevel > 0) output.println("Didn't receive a packet, or ran into an error");
+            LinkLayer.setStatus(STATUS_UNSPECIFIED_ERROR);
 			return -1;
 		}
 
@@ -130,6 +139,7 @@ public class LinkLayer implements Dot11Interface
             //As per the specification, the remaining data is discarded
 		} catch (Exception e) {
 			if (debugLevel > 0) output.println("LinkLayer: Error when copying data");
+            LinkLayer.setStatus(STATUS_UNSPECIFIED_ERROR);
 			return -1;
 		}
 
@@ -146,10 +156,9 @@ public class LinkLayer implements Dot11Interface
 	public int status() {
 	    if (status < 1 || status > 10) {
             if (debugLevel > 0) output.println("LinkLayer: Status is an illegal value");
-            return 2;
-        } else {
-            return status;
+            setStatus(STATUS_UNSPECIFIED_ERROR);
         }
+	    return status;
 	}
 
 	/**
@@ -168,6 +177,12 @@ public class LinkLayer implements Dot11Interface
 					+ "\n\tx=3: sender details"
 					+ "\n\tx=4: link layer details"
 					+ "\n\tx=5: beacon layer details"
+					+ "\n(2,x): set slot selection"
+					+ "\n\tx=1: random"
+					+ "\n\tx=2: always take maximum value"
+					+ "\n(3,x): set beacon interval"
+					+ "\n\tx>0: x is the beacon interval in seconds"
+					+ "\n\tx<=0: beacons disabled"
 					);
 		}
 		if (cmd == 1) {

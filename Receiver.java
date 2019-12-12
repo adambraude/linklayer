@@ -44,6 +44,7 @@ public class Receiver implements Runnable {
 			theRF.transmit(ack.getPacket());
 		} catch (Exception e) {
 			if (LinkLayer.debugLevel() == 2) output.println("Receiver: error trying to sleep.");
+            LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
 		}
 	}
 	
@@ -93,6 +94,7 @@ public class Receiver implements Runnable {
 		}
 		catch (Exception e) {
 			if (LinkLayer.debugLevel() == 2) output.println("Receiver: error passing packet to LinkLayer");
+            LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
 		}
 		if (incoming.getDest() == this.ourMAC) {
 			sendAck(incoming);
@@ -105,6 +107,7 @@ public class Receiver implements Runnable {
 	        long unpackTime = LinkLayer.getTime(theRF)-time;
 	        long adjustedTime = beaconTime + unpackTime;
 	        long dif = adjustedTime-LinkLayer.getTime(theRF);
+	        if (LinkLayer.debugLevel() == 5) output.println("Incoming beacon: dif=" + dif);
 	        if (adjustedTime > 0) {
                 if (LinkLayer.debugLevel() == 2) output.println("Receiver: Clock Time adjusted");
 	            LinkLayer.addToOffset(dif);
@@ -112,6 +115,7 @@ public class Receiver implements Runnable {
             return;
         }
         if (LinkLayer.debugLevel() == 2) output.println("Receiver: adjustClock called on a packet that isn't a Beacon");
+        LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
     }
 
 	@Override
@@ -130,16 +134,6 @@ public class Receiver implements Runnable {
 					if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a damaged packet");
 					continue;
 				}
-
-				// If the destination is the same as the source, it should be a beacon frame
-				if (incoming.getDest() == incoming.getSrc()) {
-				    if (incoming.getType() == Packet.FT_BEACON) {
-				        // if it is a beacon, handle it then move on to next packet
-                        if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a Beacon!");
-				        adjustClock(incoming, beaconTime);
-				        continue;
-                    }
-                }
 				
 				//If the data is meant for us, or for everyone, mark it
 				if (incoming.getDest() == this.ourMAC || incoming.getDest() == -1) {
@@ -148,13 +142,19 @@ public class Receiver implements Runnable {
 						handleACK(incoming);
 					} else if (incoming.getType() == Packet.FT_DATA && received.size() <= MAX_PACKETS) {
 						handleData(incoming);
-					}
+					}  else if (incoming.getType() == Packet.FT_BEACON) {
+                        if (incoming.getType() == Packet.FT_BEACON) {
+                            if (LinkLayer.debugLevel() == 2) output.println("Receiver: received a Beacon!");
+                            adjustClock(incoming, beaconTime);
+                        }
+                    }
 				} else {
 					if (LinkLayer.debugLevel() == 2) output.println("Receiver: packet received, but it's not ours.");
 				}
 
 			} catch (Exception e){
 				if (LinkLayer.debugLevel() == 2) output.println("Receiver: error receiving packet!");
+                LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
 			}
 		}
 	}

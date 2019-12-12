@@ -67,11 +67,9 @@ public class Sender implements Runnable {
             } else {
             	if (LinkLayer.getTime(theRF)>nextBeacon) {
                 	long t = LinkLayer.getTime(theRF)+BEACONTIME;
-                	if (LinkLayer.debugLevel() == 5) output.println("Sending beacon with time " +t);
                 	packet = Packet.makeBeacon(ourMAC, t);
                 } else {
                 	try {
-                		if (LinkLayer.debugLevel() == 5) output.println("Waiting for next beacon at time " +nextBeacon);
                         packet = toSend.poll(nextBeacon-LinkLayer.getTime(theRF),TimeUnit.MILLISECONDS);
                     } catch (Exception e) {
                         if (LinkLayer.debugLevel() > 0) output.println("Sender: error while retrieving packet");
@@ -79,7 +77,6 @@ public class Sender implements Runnable {
                     }
                 	if (packet == null) {
                 		long t = LinkLayer.getTime(theRF)+BEACONTIME;
-                		if (LinkLayer.debugLevel() == 5) output.println("Sending beacon with time " +t);
                     	packet = Packet.makeBeacon(ourMAC, t);
                 	}
                 }
@@ -104,7 +101,8 @@ public class Sender implements Runnable {
             while (!sent) {
                 if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.println("Sender: Sending Packet attempt #"+sendCount);
                 if (sendCount > RF.dot11RetryLimit) {
-                    if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.print("Sender: Packet reached send attempt limit");
+                    if (LinkLayer.debugLevel() == 3&& packet.getType()!=Packet.FT_BEACON) output.print("Sender: Packet reached send attempt limit");
+                    LinkLayer.setStatus(LinkLayer.STATUS_TX_FAILED);
                     break;
                 }
                 // Do left half of the diagram
@@ -114,7 +112,7 @@ public class Sender implements Runnable {
                 if (canSkip) {
                     // If true, can skip to sending
                     if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.println("Sender: Medium idle, send early");
-                    jumpToSend = leftHalf(packet);
+                    jumpToSend = leftHalf();
                 }
 
                 // Starting right part of diagram
@@ -172,6 +170,7 @@ public class Sender implements Runnable {
                     // If it is the correct ack, move on to the next packet.
                     if (LinkLayer.debugLevel() == 3 && packet.getDest()!=-1) output.print("Sender: Received ACK, moving onto next packet");
                     if (LinkLayer.debugLevel() == 3 && packet.getDest()==-1 && packet.getType()!=Packet.FT_BEACON) output.print("Sender: Broadcast packet sent, moving to next");
+                    LinkLayer.setStatus(LinkLayer.STATUS_TX_DELIVERED);
                     sent = true;
                 }
             }
@@ -179,7 +178,7 @@ public class Sender implements Runnable {
 	}
 
 	// Goes through left half of diagram
-	private boolean leftHalf(Packet packet) {
+	private boolean leftHalf() {
         // Check if medium is idle
         boolean inUse = theRF.inUse();
 
@@ -277,6 +276,7 @@ public class Sender implements Runnable {
             } catch (Exception e) {
                 e.printStackTrace();
                 if (LinkLayer.debugLevel() > 0) output.println("Sender: Error in waiting for ACK");
+                LinkLayer.setStatus(LinkLayer.STATUS_UNSPECIFIED_ERROR);
                 break;
             }
             // Only get here if we have an ack, or wait entire poll time, in which case ack is null
