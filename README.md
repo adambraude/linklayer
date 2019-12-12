@@ -1,1 +1,1 @@
-Simulates a link layer. Well, it will do that eventually.
+Simulates a link layer running a simplified version of the 802.11 WIFI protocol. This was a class project for professor Brad Richards' CSC 325 Networks and requires additional files to run.
