@@ -32,10 +32,13 @@ public class Sender implements Runnable {
 	//absolute time of the next beacon, in ms
 	private long nextBeacon;
 	
-	//used internally to calculate average beacon send times
+	//used internally to calculate debug statistics
 	private long btotal = 0;
 	private long bnum = 0;
 	private float bvg=0;
+	private long atotal = 0;
+	private long anum = 0;
+	private float aavg=0;
 
 	
 	public Sender(RF theRF, short ourMAC, PrintWriter output, ArrayBlockingQueue<Packet> toSend,ArrayBlockingQueue<Packet> ackQueue) {
@@ -97,20 +100,20 @@ public class Sender implements Runnable {
             // If a packet sent doesn't receive an ack, always go down right side of chart
             boolean canSkip = true;
             // Inner while loop in case need to resend current packet of data
-            if (LinkLayer.debugLevel() == 3) output.println("Sender: Sending Packet");
+            if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.println("Sender: Sending Packet");
             while (!sent) {
-                if (LinkLayer.debugLevel() == 3) output.println("Sender: Sending Packet attempt #"+sendCount);
+                if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.println("Sender: Sending Packet attempt #"+sendCount);
                 if (sendCount > RF.dot11RetryLimit) {
-                    if (LinkLayer.debugLevel() == 3) output.print("Sender: Packet reached send attempt limit");
+                    if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.print("Sender: Packet reached send attempt limit");
                     break;
                 }
                 // Do left half of the diagram
-                if (LinkLayer.debugLevel() == 3) output.println("Sender: Starting left half of flow chart");
+                if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.println("Sender: Starting left half of flow chart");
                 boolean jumpToSend = false;
                 // if left side is viable, attempt it
                 if (canSkip) {
                     // If true, can skip to sending
-                    if (LinkLayer.debugLevel() == 3) output.println("Sender: Medium idle, send early");
+                    if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.println("Sender: Medium idle, send early");
                     jumpToSend = leftHalf(packet);
                 }
 
@@ -118,19 +121,19 @@ public class Sender implements Runnable {
 
                 // If jumpToSend is true skip right DIFS waiting
                 if (!jumpToSend) {
-                    if (LinkLayer.debugLevel() == 3) output.println("Sender: Start right half of flow diagram");
+                    if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.println("Sender: Start right half of flow diagram");
                     rightDIFSWait();
                 }
 
                 // If packet hasn't been sent, go through exponential backoff wait time and send the packet
                 if (!jumpToSend) {
-                    if (LinkLayer.debugLevel() == 3) output.println("Sender: Starting Exponential Backoff");
+                    if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.println("Sender: Starting Exponential Backoff");
                     int slotsToWait = calculateSlots(expCounter);
                     expBackoff(slotsToWait);
                 }
 
                 // Done waiting for exponential backoff, or is able to send early, so send data.
-                if (LinkLayer.debugLevel() == 3) output.println("Sender: Sending Data");
+                if (LinkLayer.debugLevel() == 3 && packet.getType()!=Packet.FT_BEACON) output.println("Sender: Sending Data");
                 long st=LinkLayer.getTime(theRF);
                 if (packet.getType() == Packet.FT_BEACON) {
                 	//Per Brad's instructions, rebuild the packet right before sending
@@ -152,7 +155,7 @@ public class Sender implements Runnable {
                 }
 
                 // now need to wait for an ack to appear in the ack queue
-                if (LinkLayer.debugLevel() == 3) output.println("Sender: Waiting for ACK");
+                if (LinkLayer.debugLevel() == 3 && packet.getDest()!=-1) output.println("Sender: Waiting for ACK");
                 boolean gotACK = waitForACK(packet);
 
                 // Either move on to next packet, or remain on current
@@ -167,7 +170,8 @@ public class Sender implements Runnable {
                     canSkip = false;
                 } else {
                     // If it is the correct ack, move on to the next packet.
-                    if (LinkLayer.debugLevel() == 3) output.print("Sender: Received ACK, moving onto next packet");
+                    if (LinkLayer.debugLevel() == 3 && packet.getDest()!=-1) output.print("Sender: Received ACK, moving onto next packet");
+                    if (LinkLayer.debugLevel() == 3 && packet.getDest()==-1) output.print("Sender: Broadcast packet sent, moving to next");
                     sent = true;
                 }
             }
@@ -264,7 +268,6 @@ public class Sender implements Runnable {
 	    if (packet.getDest() == -1) return true;
 
         int waitTime = RF.aSlotTime + RF.aSIFSTime + ACKTIME;
-
         Packet ack;
         // wait for ack for the timeout time
         while (waitTime > 0) {
@@ -282,6 +285,12 @@ public class Sender implements Runnable {
             if (ack == null) {
                 return false;
             }
+            long end = LinkLayer.getTime(theRF);
+            
+            atotal += end-start;
+            anum++;
+            aavg = atotal/(float)anum;
+            if (LinkLayer.debugLevel() == 3) output.println("Average ACK wait time: " + aavg + ".");
 
             // If we received the correct ACK return true.
             if (ack.getSeq() == packet.getSeq()) {
@@ -290,7 +299,7 @@ public class Sender implements Runnable {
 
             // else we received an incorrect ACK.
             // Ignore ACK and wait again, but with reduced time
-            long end = LinkLayer.getTime(theRF);
+            
             long timeWaiting = end-start;
 
             waitTime -= (int) timeWaiting;
