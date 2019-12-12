@@ -29,7 +29,7 @@ public class LinkLayer implements Dot11Interface
 	
 	private static int debugLevel = 1;
 	private static int slotSelection = 0;
-	private static int beaconInterval = 0000; //ms
+	private static int beaconInterval = 8000; //ms
 	private static int status = 0;
 	private static long offset = 0;
 	

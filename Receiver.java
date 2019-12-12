@@ -105,15 +105,16 @@ public class Receiver implements Runnable {
 	    long beaconTime = packet.getBeaconTime();
 	    if (beaconTime != -1) {
 	        long unpackTime = LinkLayer.getTime(theRF)-time;
-            if (LinkLayer.debugLevel() == 5) output.println("Reciever: Beacon took "+unpackTime+" seconds to process");
+            if (LinkLayer.debugLevel() == 5) output.println("Reciever: Beacon took a time of "+unpackTime+" to process");
 	        long adjustedTime = beaconTime + unpackTime;
             if (LinkLayer.debugLevel() == 5) output.println("Reciever: Beacon gives the time as "+adjustedTime);
 	        long dif = adjustedTime-LinkLayer.getTime(theRF);
-            if (LinkLayer.debugLevel() == 5) output.println("Reciever: Beacon has "+dif+" second difference in time");
+            if (LinkLayer.debugLevel() == 5) output.println("Reciever: Beacon has a difference of "+dif+" in time");
 	        if (dif > 0) {
                 if (LinkLayer.debugLevel() == 5) output.println("Receiver: Clock Time adjusted");
 	            LinkLayer.addToOffset(dif);
             }
+            if (LinkLayer.debugLevel() == 5) output.println("Reciever: Ignored Beacon");
             return;
         }
         if (LinkLayer.debugLevel() == 2) output.println("Receiver: adjustClock called on a packet that isn't a Beacon");
