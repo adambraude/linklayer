@@ -241,7 +241,6 @@ public class Sender implements Runnable {
         }
         
         if (LinkLayer.debugLevel() == 3) output.print("Sender: Setting exponential backoff to " + toReturn +  " slots.");
-        // Generate a random number of slots to wait
         return toReturn;
     }
 

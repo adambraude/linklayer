@@ -8,7 +8,7 @@ import java.util.zip.CRC32;
  * This class can be used to build a packet from a given
  * set of parameters, or parse a byte array into its component fields
  * 
- * @author Braude
+ * @author Braude and Corpron
  *
  */
 public class Packet {

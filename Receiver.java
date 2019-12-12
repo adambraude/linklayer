@@ -110,7 +110,7 @@ public class Receiver implements Runnable {
             if (LinkLayer.debugLevel() == 5) output.println("Reciever: Beacon gives the time as "+adjustedTime);
 	        long dif = adjustedTime-LinkLayer.getTime(theRF);
             if (LinkLayer.debugLevel() == 5) output.println("Reciever: Beacon has "+dif+" second difference in time");
-	        if (adjustedTime > 0) {
+	        if (dif > 0) {
                 if (LinkLayer.debugLevel() == 5) output.println("Receiver: Clock Time adjusted");
 	            LinkLayer.addToOffset(dif);
             }
@@ -146,7 +146,7 @@ public class Receiver implements Runnable {
 						handleData(incoming);
 					}  else if (incoming.getType() == Packet.FT_BEACON) {
                         if (incoming.getType() == Packet.FT_BEACON) {
-                            if (LinkLayer.debugLevel() == 5) output.println("Receiver: received a Beacon!");
+                            if (LinkLayer.debugLevel() == 5 || LinkLayer.debugLevel() == 2) output.println("Receiver: received a Beacon!");
                             adjustClock(incoming, beaconTime);
                         }
                     }
