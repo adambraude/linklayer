@@ -24,7 +24,7 @@ public class Sender implements Runnable {
     // DIFS is defined as the SIFS time + 2*SlotTime
 	private static int DIFS = RF.aSIFSTime + 2*RF.aSlotTime;
 	
-	private static final int ACKTIME = 1000; //placeholder
+	private static final int ACKTIME = 1190;
 	
 	//Measured with Win10/2.5Ghz i5/8GB RAM
 	private static final int BEACONTIME = 1820;
@@ -171,7 +171,7 @@ public class Sender implements Runnable {
                 } else {
                     // If it is the correct ack, move on to the next packet.
                     if (LinkLayer.debugLevel() == 3 && packet.getDest()!=-1) output.print("Sender: Received ACK, moving onto next packet");
-                    if (LinkLayer.debugLevel() == 3 && packet.getDest()==-1) output.print("Sender: Broadcast packet sent, moving to next");
+                    if (LinkLayer.debugLevel() == 3 && packet.getDest()==-1 && packet.getType()!=Packet.FT_BEACON) output.print("Sender: Broadcast packet sent, moving to next");
                     sent = true;
                 }
             }
