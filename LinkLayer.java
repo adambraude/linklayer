@@ -64,6 +64,7 @@ public class LinkLayer implements Dot11Interface
 	public LinkLayer(short ourMAC, PrintWriter output) {
 		this.ourMAC = ourMAC;
 		this.output = output;
+		if (ourMAC == -1) throw new IllegalArgumentException("MAC Address cannot be the broadcast address (-1)!");
 
 		try {
             theRF = new RF(null, null);
@@ -93,6 +94,11 @@ public class LinkLayer implements Dot11Interface
 	public int send(short dest, byte[] data, int len) {
 
 		if (debugLevel > 0) output.println("LinkLayer: Sending "+len+" bytes to "+dest);
+		if (outgoingQueue.size() >= queue_size) {
+			if (debugLevel == 4) output.println("LinkLayer: rejected transmission, too many in queue.");
+			setStatus(STATUS_INSUFFICIENT_BUFFER_SPACE);
+			return 0;
+		}
 		
 		if (!outgoingSeq.containsKey(dest)) {
 			outgoingSeq.put(dest, 0);
@@ -115,6 +121,10 @@ public class LinkLayer implements Dot11Interface
 	 */
 	public int recv(Transmission t) {
 		if (debugLevel == 4) output.println("LinkLayer: blocking on recv()");
+		if (t == null) {
+			setStatus(STATUS_BAD_ADDRESS);
+			return -1;
+		}
 		// Block until we receive the data meant for us
 		Packet incoming;
 		try {
@@ -142,9 +152,6 @@ public class LinkLayer implements Dot11Interface
             LinkLayer.setStatus(STATUS_UNSPECIFIED_ERROR);
 			return -1;
 		}
-
-		// At this point, know that the message has been successfully received. This would be where
-		// the ACK would be made and probably sent
 
 		//Returns the amount of data stored
 		return Math.min(incoming.getData().length, t.getBuf().length);
