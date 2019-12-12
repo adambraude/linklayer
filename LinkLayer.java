@@ -187,7 +187,7 @@ public class LinkLayer implements Dot11Interface
 				output.println("Slot selection is fixed.");
 			}
 			if (beaconInterval > 0) {
-				output.println("Sending beacons every "+ beaconInterval + " seconds");
+				output.println("Sending beacons every "+ beaconInterval/1000 + " seconds");
 			} else {
 				output.println("Beacons are disabled.");
 			}
