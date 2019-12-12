@@ -30,7 +30,7 @@ public class LinkLayer implements Dot11Interface
 	
 	private static int debugLevel = 1;
 	private static int slotSelection = 0;
-	private static int beaconInterval = 5000; //ms
+	private static int beaconInterval = 8000; //ms
 	private static int status = 0;
 	private static long offset = 0;
 	
@@ -64,6 +64,7 @@ public class LinkLayer implements Dot11Interface
 	public LinkLayer(short ourMAC, PrintWriter output) {
 		this.ourMAC = ourMAC;
 		this.output = output;
+		if (ourMAC == -1) throw new IllegalArgumentException("MAC Address cannot be the broadcast address (-1)!");
 
 		try {
             theRF = new RF(null, null);
@@ -93,6 +94,11 @@ public class LinkLayer implements Dot11Interface
 	public int send(short dest, byte[] data, int len) {
 
 		if (debugLevel > 0) output.println("LinkLayer: Sending "+len+" bytes to "+dest);
+		if (outgoingQueue.size() >= queue_size) {
+			if (debugLevel == 4) output.println("LinkLayer: rejected transmission, too many in queue.");
+			setStatus(STATUS_INSUFFICIENT_BUFFER_SPACE);
+			return 0;
+		}
 		
 		if (!outgoingSeq.containsKey(dest)) {
 			outgoingSeq.put(dest, 0);
@@ -114,7 +120,11 @@ public class LinkLayer implements Dot11Interface
 	 * the Transmission object.  See docs for full description.
 	 */
 	public int recv(Transmission t) {
-		if (debugLevel > 0) output.println("LinkLayer: blocking on recv()");
+		if (debugLevel == 4) output.println("LinkLayer: blocking on recv()");
+		if (t == null) {
+			setStatus(STATUS_BAD_ADDRESS);
+			return -1;
+		}
 		// Block until we receive the data meant for us
 		Packet incoming;
 		try {
@@ -143,9 +153,6 @@ public class LinkLayer implements Dot11Interface
 			return -1;
 		}
 
-		// At this point, know that the message has been successfully received. This would be where
-		// the ACK would be made and probably sent
-
 		//Returns the amount of data stored
 		return Math.min(incoming.getData().length, t.getBuf().length);
 	}
@@ -167,14 +174,34 @@ public class LinkLayer implements Dot11Interface
 	public int command(int cmd, int val) {
 		if (debugLevel == 4) output.println("LinkLayer: Sending command "+cmd+" with value "+val);
 		if (cmd == 0) {
+			output.println("Status: " + LinkLayer.status);
+			output.println("Debug level: " + LinkLayer.debugLevel);
+			if (slotSelection == SS_RANDOM) {
+				output.println("Slot selection is random.");
+			} else {
+				output.println("Slot selection is fixed.");
+			}
+			if (beaconInterval > 0) {
+				output.println("Sending beacons every "+ beaconInterval + " seconds");
+			} else {
+				output.println("Beacons are disabled.");
+			}
 			output.println(
 					"Available commands:\n"
-					+ "(0): help\n"
+					+ "(0): current settings and help\n"
 					+ "(1,x): set debug level\n"
 					+ "\tx<1: silent mode"
 					+ "\n\tx=1: default"
 					+ "\n\tx=2: receiver details"
 					+ "\n\tx=3: sender details"
+					+ "\n\tx=4: link layer details"
+					+ "\n\tx=5: beacon layer details"
+					+ "\n(2,x): set slot selection"
+					+ "\n\tx=1: random"
+					+ "\n\tx=2: always take maximum value"
+					+ "\n(3,x): set beacon interval"
+					+ "\n\tx>0: x is the beacon interval in seconds"
+					+ "\n\tx<=0: beacons disabled"
 					);
 		}
 		if (cmd == 1) {
@@ -190,12 +217,15 @@ public class LinkLayer implements Dot11Interface
 				output.println("Setting slot selection to use the maximum possible time");
 			} else {
 				output.println("Invalid slot selection setting.");
-                LinkLayer.setStatus(STATUS_UNSPECIFIED_ERROR);
 			}
 		}
 		if (cmd == 3) {
 			if (val > 0) {
 				output.println("Setting beacon interval to "+ val + " seconds");
+				if (beaconInterval <0 && outgoingQueue.isEmpty()) {
+					//if beacons have just been re-enabled, make sure one gets sent
+					outgoingQueue.add(Packet.makeBeacon(ourMAC, LinkLayer.getTime(theRF)));
+				}
 			} else {
 				output.println("Beacons are disabled.");
 			}

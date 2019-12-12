@@ -107,6 +107,7 @@ public class Receiver implements Runnable {
 	        long unpackTime = LinkLayer.getTime(theRF)-time;
 	        long adjustedTime = beaconTime + unpackTime;
 	        long dif = adjustedTime-LinkLayer.getTime(theRF);
+	        if (LinkLayer.debugLevel() == 5) output.println("Incoming beacon: dif=" + dif);
 	        if (adjustedTime > 0) {
                 if (LinkLayer.debugLevel() == 2) output.println("Receiver: Clock Time adjusted");
 	            LinkLayer.addToOffset(dif);
