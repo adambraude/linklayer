@@ -15,7 +15,7 @@ import rf.RF;
  */
 public class LinkLayer implements Dot11Interface 
 {
-	public static final int queue_size = 4; //limited buffering is TODO
+	private static final int queue_size = 4;
 	private static final int ack_size = 2;
 	
 	private static ArrayBlockingQueue<Packet> received = new ArrayBlockingQueue<>(queue_size);
@@ -91,7 +91,6 @@ public class LinkLayer implements Dot11Interface
 	 * of bytes to send.  See docs for full description.
 	 */
 	public int send(short dest, byte[] data, int len) {
-
 		if (debugLevel > 0) output.println("LinkLayer: Sending "+len+" bytes to "+dest);
 		if (outgoingQueue.size() >= queue_size) {
 			if (debugLevel == 4) output.println("LinkLayer: rejected transmission, too many in queue.");
@@ -201,8 +200,8 @@ public class LinkLayer implements Dot11Interface
 					+ "\n\tx=4: link layer details"
 					+ "\n\tx=5: beacon layer details"
 					+ "\n(2,x): set slot selection"
-					+ "\n\tx=1: random"
-					+ "\n\tx=2: always take maximum value"
+					+ "\n\tx=0: random"
+					+ "\n\tx=1: always take maximum value"
 					+ "\n(3,x): set beacon interval"
 					+ "\n\tx>0: x is the beacon interval in seconds"
 					+ "\n\tx<=0: beacons disabled"

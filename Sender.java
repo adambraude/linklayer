@@ -24,9 +24,8 @@ public class Sender implements Runnable {
     // DIFS is defined as the SIFS time + 2*SlotTime
 	private static int DIFS = RF.aSIFSTime + 2*RF.aSlotTime;
 	
-	private static final int ACKTIME = 1190;
-	
 	//Measured with Win10/2.5Ghz i5/8GB RAM
+	private static final int ACKTIME = 1190;
 	private static final int BEACONTIME = 1820;
 	
 	//absolute time of the next beacon, in ms
@@ -87,7 +86,6 @@ public class Sender implements Runnable {
             	}
             }
 
-            // Need to find out when expCounter is supposed to increment, currently always waits aCWmin
             // resets on new packet to send
             int expCounter = 0;
             int sendCount = 0;
