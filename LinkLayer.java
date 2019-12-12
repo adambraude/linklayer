@@ -108,8 +108,13 @@ public class LinkLayer implements Dot11Interface
 		}
 		int seq = outgoingSeq.get(dest);
 		outgoingSeq.put(dest, seq+1);
+		byte[] acceptedData = data;
+		if (data.length > Packet.MAX_DATA) {
+			acceptedData = new byte[Packet.MAX_DATA];
+			System.arraycopy(data, 0, acceptedData, 0, Packet.MAX_DATA);
+		}
 		// construct packet from dest, data, source is our mac address
-		Packet p = new Packet(ourMAC, dest, data, Packet.FT_DATA, seq, false);
+		Packet p = new Packet(ourMAC, dest, acceptedData, Packet.FT_DATA, seq, false);
 		outgoingQueue.add(p);
 
 		return Math.min(len, data.length);
